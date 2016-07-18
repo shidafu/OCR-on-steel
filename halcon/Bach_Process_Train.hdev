@@ -1,0 +1,547 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="12.0">
+<procedure name="main">
+<interface/>
+<body>
+<l>list_files ('D:/文字识别项目/南钢字符图/原始图像/新建文件夹', 'files', Files)</l>
+<l>savePath:= 'D:/文字识别项目/南钢字符图/原始图像/新建文件夹'</l>
+<l>for k := 0 to |Files| - 1 by 1</l>
+<l>    read_image (Image, Files[k])</l>
+<l>    count_channels (Image, Channels)</l>
+<l>    if(Channels==3)</l>
+<l>        decompose3(Image,ImageR,ImageG,ImageB)</l>
+<l>        trans_from_rgb(ImageR,ImageG,ImageB,ImageResult1, ImageResult2, ImageResult3, 'hsv')</l>
+<l>        rgb3_to_gray (Image, Image, Image, ImageGray)</l>
+<l>    else</l>
+<l>        ImageGray:=Image</l>
+<l>    endif</l>
+<c>        </c>
+<c>    *FFT高通滤波-&gt;sobel算子-&gt;阈值化+形态学提取字符区域</c>
+<l>    character_locate (ImageGray, ImageRotate_Char, ImageRotate_Char_fftfiltered, 100, 60, 8, 200, 1000, 40, 200, 5000, 99999, 0.65, 0.001, 1.5, 20, 20)</l>
+<c>    *字符串定位测试100%</c>
+<c>    </c>
+<c></c>
+<c>    </c>
+<c>    *FFT高通滤波-&gt;sobel算子-&gt;阈值化+形态学提取字符区域</c>
+<l>*    single_locate (ImageRotate_Char_fftfiltered, Char_Regions, 8, 200, 1000, 40, 200, 5000, 99999, 0.65, 0.001, 1.5)</l>
+<c>    *字符定位测试100%</c>
+<c>    </c>
+<c>    </c>
+<c>    *宽松的FFT高通滤波以识别</c>
+<l>*    filter_fftbandpass (ImageRotate_Char, ImageRotate_Char_fftfiltered_2, 0.0001, 2.0, 'dc_edge')</l>
+<c>        </c>
+<c>    *定制OCR识别字符(未完成)</c>
+<l>*    character_recognition (ImageRotate_Char, Symbols_OCR, SymbolNames_OCR, Confidences_OCR)</l>
+<c>   </c>
+<c>    *字符条件判断(未完成)</c>
+<l>*    Markov_Lows:=0</l>
+<l>*    character_markovfilter (Chars, Markov_Lows, Chars)</l>
+<l>endfor</l>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="filter_fftbandpass">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="ImageOut" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="MinFrequency" base_type="ctrl" dimension="0"/>
+<par name="MaxFrequency" base_type="ctrl" dimension="0"/>
+<par name="Mode" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<l>get_image_size (ImageIn, Width_Part, Height_Part)</l>
+<l>gen_bandpass (Bandpass, MinFrequency, MaxFrequency, 'n', Mode, Width_Part, Height_Part)</l>
+<l>fft_generic (ImageIn, ImagePart_Steel_FFT, 'to_freq', -1, 'none', Mode, 'complex')</l>
+<l>convol_fft (ImagePart_Steel_FFT, Bandpass, ImagePart_Steel_FFT_Banded)</l>
+<l>fft_generic (ImagePart_Steel_FFT_Banded, ImageOut, 'from_freq', 1, 'none', Mode, 'byte')</l>
+<l>return ()</l>
+</body>
+<docu id="filter_fftbandpass">
+<abstract lang="zh_CN">同gen_bandpassgen</abstract>
+<parameters>
+<parameter id="ImageIn">
+<multichannel>false</multichannel>
+<multivalue>false</multivalue>
+<sem_type>image</sem_type>
+<type_list>
+<item>byte</item>
+<item>int8</item>
+</type_list>
+</parameter>
+<parameter id="ImageOut">
+<multichannel>false</multichannel>
+<multivalue>false</multivalue>
+<sem_type>image</sem_type>
+<type_list>
+<item>byte</item>
+<item>int8</item>
+</type_list>
+</parameter>
+<parameter id="MaxFrequency">
+<default_value>2.00</default_value>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>2.000000</value_max>
+<value_min>0.000000</value_min>
+</parameter>
+<parameter id="MinFrequency">
+<default_value>0.00</default_value>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>2.000000</value_max>
+<value_min>0.000000</value_min>
+</parameter>
+<parameter id="Mode">
+<default_value>'dc_edge'</default_value>
+<multivalue>false</multivalue>
+<sem_type>string</sem_type>
+<type_list>
+<item>string</item>
+</type_list>
+<value_list>
+<item>'dc_center'</item>
+<item>'dc_edge'</item>
+</value_list>
+</parameter>
+</parameters>
+</docu>
+</procedure>
+<procedure name="character_locate">
+<interface>
+<io>
+<par name="ImageGray" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="ImageRotate_Char" base_type="iconic" dimension="0"/>
+<par name="ImageRotate_Char_fftfiltered" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="Cut_Top" base_type="ctrl" dimension="0"/>
+<par name="Cut_Botton" base_type="ctrl" dimension="0"/>
+<par name="Rate_Th" base_type="ctrl" dimension="0"/>
+<par name="Width_Min" base_type="ctrl" dimension="0"/>
+<par name="Width_Max" base_type="ctrl" dimension="0"/>
+<par name="Height_Min" base_type="ctrl" dimension="0"/>
+<par name="Height_Max" base_type="ctrl" dimension="0"/>
+<par name="Areas_Min" base_type="ctrl" dimension="0"/>
+<par name="Areas_Max" base_type="ctrl" dimension="0"/>
+<par name="Rectangularity_Min" base_type="ctrl" dimension="0"/>
+<par name="FFTBand_Low" base_type="ctrl" dimension="0"/>
+<par name="FFTBand_High" base_type="ctrl" dimension="0"/>
+<par name="borderH" base_type="ctrl" dimension="0"/>
+<par name="borderW" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<l>gen_gauss_pyramid (ImageGray, ImagePyramid, 'weighted', 0.5)</l>
+<l>select_obj (ImagePyramid, ImageGray_2D, 2)</l>
+<l>* Cut_Top := 100</l>
+<l>* Cut_Botton := 60</l>
+<l>get_image_size (ImageGray_2D, Width_Src, Height_src)</l>
+<l>crop_rectangle1 (ImageGray_2D, ImagePart_Steel, Cut_Top, 0, Height_src-Cut_Botton, Width_Src)</l>
+<c>* ****严格的FFT高通滤波以实现定位</c>
+<l>filter_fftbandpass (ImagePart_Steel, ImagePart_Steel_fftfiltered, FFTBand_Low, FFTBand_High, 'dc_edge')</l>
+<c>* 图像预处理-找字符区域</c>
+<l>get_image_size (ImagePart_Steel, Width_Steel, Height_Steel)</l>
+<l>sobel_amp (ImagePart_Steel, EdgeAmplitude_Steel, 'sum_abs', 3)</l>
+<l>intensity (EdgeAmplitude_Steel, EdgeAmplitude_Steel, Mean_Steel, Deviation_Steel)</l>
+<l>Rate_Th := Mean_Steel*Rate_Th</l>
+<l>if (Rate_Th&gt;200)</l>
+<l>    Rate_Th := 200</l>
+<l>endif</l>
+<l>threshold (EdgeAmplitude_Steel, Th_Regions_Steel, Rate_Th, 255)</l>
+<l>connection (Th_Regions_Steel, ConnectedDots_Steel)</l>
+<l>select_shape (ConnectedDots_Steel, SelectedLinesDots_Steel, ['area','width'], 'and', [2,1], [5000,100])</l>
+<l>smallest_rectangle1 (SelectedLinesDots_Steel, Row1_1, Column1_1, Row2_1, Column2_1)</l>
+<l>gen_rectangle1 (Rectangle_Steel, Row1_1, Column1_1, Row2_1, Column2_1)</l>
+<l>union1 (Rectangle_Steel, RegionUnion_Steel)</l>
+<l>erosion_circle (RegionUnion_Steel, RegionErosion_C_Steel, 2.5)</l>
+<l>dilation_rectangle1 (RegionErosion_C_Steel, RegionDilation_R_Steel, 80, 10)</l>
+<l>erosion_rectangle1 (RegionDilation_R_Steel, RegionErosion_R_Steel, 20, 20)</l>
+<l>dilation_circle (RegionErosion_R_Steel, RegionDilation_C_Steel, 15)</l>
+<l>connection (RegionDilation_C_Steel, ConnectedLines_Steel)</l>
+<l>select_shape (ConnectedLines_Steel, SelectedLines_Steel, ['width','height','area'], 'and', [Width_Min,Height_Min,Areas_Min], [Width_Max,Height_Max,Areas_Max])</l>
+<l>select_shape (SelectedLines_Steel, SelectedRegions_Steel, 'rectangularity', 'and', Rectangularity_Min, 1)</l>
+<l>count_obj (SelectedRegions_Steel, Number_Steel)</l>
+<l>findNum:=0</l>
+<c></c>
+<c>* 找到字符段图片</c>
+<l>if (Number_Steel&gt;0)</l>
+<l>    region_features (SelectedRegions_Steel, 'height', Value_Height_Steel)</l>
+<l>    area_center (SelectedRegions_Steel, Area_Steel, Row_Steel, Column_Steel)</l>
+<l>    Num_Steel := -1</l>
+<l>    Area_Max := 0</l>
+<l>    for Index := 0 to Number_Steel-1 by 1</l>
+<l>        if (Area_Steel[Index]&gt;Area_Max and Value_Height_Steel[Index]&lt;400)</l>
+<l>            Area_Max_Steel := Area_Steel[Index]</l>
+<l>            Num_Steel := Index</l>
+<l>        endif</l>
+<l>    endfor</l>
+<l>    if (Num_Steel&gt;=0)</l>
+<l>        select_obj (SelectedRegions_Steel, ObjectSelected_Char, Num_Steel+1)</l>
+<l>        region_features (ObjectSelected_Char, 'width', S_Width)</l>
+<l>        region_features (ObjectSelected_Char, 'height', S_Height)</l>
+<l>        if (S_Width/S_Height&gt;3)</l>
+<c>            * 字符图像处理</c>
+<l>            smallest_rectangle1 (ObjectSelected_Char, Row1_2, Column1_2, Row2_2, Column2_2)</l>
+<l>            region_features (ObjectSelected_Char, 'column', S_Center)</l>
+<l>*             if (Row1_2&gt;5 and Column1_2&gt;50 and Row2_2&lt;Height_Steel-5 and Column2_2&lt;Width_Steel-50)</l>
+<l>            if (S_Center&lt;0.85*Width_Steel and S_Center&gt;0.15*Width_Steel)</l>
+<c>                ****扩大边框，特别是下边框，需要保护</c>
+<l>                Row1_2:= Row1_2 - borderH</l>
+<l>                Row1_2:=max([0,Row1_2])</l>
+<l>                Column1_2:=Column1_2-borderW</l>
+<l>                Column1_2:=max([0,Column1_2])</l>
+<l>                Row2_2:= Row2_2+1.5*borderH</l>
+<l>                Row2_2:=min([Height_Steel-1,Row2_2])</l>
+<l>                Column2_2:=Column2_2+borderW</l>
+<l>                Column2_2:=min([Width_Steel-1,Column2_2])</l>
+<l>                crop_rectangle1 (ImagePart_Steel, ImagePart_Char, Row1_2, Column1_2, Row2_2, Column2_2)</l>
+<l>                crop_rectangle1 (ImagePart_Steel_fftfiltered, ImagePart_Char_fftfiltered, Row1_2, Column1_2, Row2_2, Column2_2)</l>
+<c>                ****旋转图像</c>
+<l>                text_line_orientation (ImagePart_Char, ImagePart_Char, 50, rad(-30), rad(30), OrientationAngle)</l>
+<l>                rotate_image (ImagePart_Char, ImageRotate_Char, -OrientationAngle / rad(180) * 180, 'constant')</l>
+<l>                rotate_image (ImagePart_Char_fftfiltered, ImageRotate_Char_fftfiltered, -OrientationAngle / rad(180) * 180, 'constant')</l>
+<l>                intensity (ImagePart_Char, ImagePart_Char, Mean_Char_S, Deviation_Char_S)</l>
+<l>                intensity (ImagePart_Char, ImageRotate_Char, Mean_Char_R, Deviation_Char_R)</l>
+<l>                if(Mean_Char_S-Mean_Char_R&gt;10)</l>
+<l>                    ImageRotate_Char:=ImagePart_Char</l>
+<l>                    ImageRotate_Char_fftfiltered:=ImagePart_Char_fftfiltered</l>
+<l>                endif</l>
+<l>                full_domain (ImageRotate_Char, ImageRotate_Char)</l>
+<l>                full_domain (ImageRotate_Char_fftfiltered, ImageRotate_Char_fftfiltered)</l>
+<c>                * 应该输出图像数组，但不会数组声明和赋值方法，暂时只输出单幅图像</c>
+<l>*                 ImageRotate_Char[findNum] := ImagePart_Char</l>
+<c>                * 应该输出图像数组，但不会数组声明和赋值方法，暂时只输出单幅图像</c>
+<l>*                 ImageRotate_Char_fftfiltered[findNum] := ImagePart_Char_fftfiltered</l>
+<l>                findNum := findNum + 1</l>
+<l>            endif</l>
+<l>        endif</l>
+<l>    endif</l>
+<l>endif</l>
+<l>return ()</l>
+</body>
+<docu id="character_locate">
+<parameters>
+<parameter id="Areas_Max">
+<default_value>1000</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>102400</value_max>
+<value_min>2</value_min>
+</parameter>
+<parameter id="Areas_Min">
+<default_value>1000</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>102400</value_max>
+<value_min>2</value_min>
+</parameter>
+<parameter id="Cut_Botton">
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>2048</value_max>
+<value_min>0</value_min>
+</parameter>
+<parameter id="Cut_Top">
+<default_value>0</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>2048</value_max>
+<value_min>0</value_min>
+</parameter>
+<parameter id="FFTBand_High">
+<default_value>1.0</default_value>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>2.000000</value_max>
+<value_min>0.000000</value_min>
+</parameter>
+<parameter id="FFTBand_Low">
+<default_value>0.001</default_value>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>2.000000</value_max>
+<value_min>0.000000</value_min>
+</parameter>
+<parameter id="Height_Max">
+<default_value>200</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>4096</value_max>
+<value_min>2</value_min>
+</parameter>
+<parameter id="Height_Min">
+<default_value>40</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>4096</value_max>
+<value_min>2</value_min>
+</parameter>
+<parameter id="ImageGray">
+<multichannel>false</multichannel>
+<multivalue>false</multivalue>
+<sem_type>image</sem_type>
+<type_list>
+<item>byte</item>
+<item>int8</item>
+</type_list>
+</parameter>
+<parameter id="ImageRotate_Char">
+<multichannel>false</multichannel>
+<multivalue>optional</multivalue>
+<sem_type>image</sem_type>
+<type_list>
+<item>byte</item>
+<item>int8</item>
+</type_list>
+</parameter>
+<parameter id="ImageRotate_Char_fftfiltered">
+<multichannel>false</multichannel>
+<multivalue>optional</multivalue>
+<sem_type>image</sem_type>
+<type_list>
+<item>byte</item>
+<item>int8</item>
+</type_list>
+</parameter>
+<parameter id="Rate_Th">
+<default_value>8</default_value>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>100.000000</value_max>
+<value_min>1.000000</value_min>
+</parameter>
+<parameter id="Rectangularity_Min">
+<default_value>0.5</default_value>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>1.000000</value_max>
+<value_min>0.010000</value_min>
+</parameter>
+<parameter id="Width_Max">
+<default_value>1000</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>4096</value_max>
+<value_min>2</value_min>
+</parameter>
+<parameter id="Width_Min">
+<default_value>100</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>4096</value_max>
+<value_min>2</value_min>
+</parameter>
+<parameter id="borderH">
+<default_value>20</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>100</value_max>
+<value_min>0</value_min>
+</parameter>
+<parameter id="borderW">
+<default_value>100</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>100</value_max>
+<value_min>0</value_min>
+</parameter>
+</parameters>
+</docu>
+</procedure>
+<procedure name="character_recognition">
+<interface>
+<io>
+<par name="Image_Char" base_type="iconic" dimension="0"/>
+</io>
+<oc>
+<par name="Symbol_OCR" base_type="ctrl" dimension="0"/>
+<par name="SymbolNames_OCR" base_type="ctrl" dimension="0"/>
+<par name="Confidences_OCR" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>*character_recognition(未完成)</c>
+<c>* OCR 01: Load classifier</c>
+<l>read_ocr_class_mlp ('D:/文字识别项目/南钢字符图/Code/WL20160714.omc', OcrHandle)</l>
+<l>read_image (Image_Char, 'D:/文字识别项目/南钢字符图/test1.bmp')</l>
+<l>count_channels (Image_Char, Channels)</l>
+<l>if(Channels==3)</l>
+<l>    decompose3(Image_Char,ImageR,ImageG,ImageB)</l>
+<l>    trans_from_rgb(ImageR,ImageG,ImageB,ImageResult1, ImageResult2, ImageResult3, 'hsv')</l>
+<l>    rgb3_to_gray (Image_Char, Image_Char, Image_Char, Image_Char)</l>
+<l>else</l>
+<l>    Image_Char:=Image_Char</l>
+<l>endif</l>
+<c>* OCR 01: Code generated by OCR 01</c>
+<c>* OCR 01: </c>
+<c>* OCR 01: Prepare text model</c>
+<c>* OCR 01: </c>
+<l>* create_text_model_reader ('auto', 'D:/文字识别项目/南钢字符图/Code/WL20160714.omc', TextModel)</l>
+<l>* set_text_model_param (TextModel, 'polarity', 'light_on_dark')</l>
+<l>* set_text_model_param (TextModel, 'is_dotprint', 'true')</l>
+<l>* set_text_model_param (TextModel, 'min_char_width', 40)</l>
+<l>* set_text_model_param (TextModel, 'min_char_height', 65)</l>
+<l>* set_text_model_param (TextModel, 'min_stroke_width', 5.0)</l>
+<l>* set_text_model_param (TextModel, 'max_char_width', 60)</l>
+<l>* set_text_model_param (TextModel, 'max_char_height', 85)</l>
+<l>* set_text_model_param (TextModel, 'max_stroke_width', 8.0)</l>
+<l>*set_text_model_param (TextModel, 'uppercase_only', 'true')</l>
+<l>*set_text_model_param (TextModel, 'fragment_size_min', 11)</l>
+<l>* set_text_model_param (TextModel, 'eliminate_border_blobs', 'true')</l>
+<l>* set_text_model_param (TextModel, 'base_line_tolerance', 0.2)</l>
+<l>*set_text_model_param (TextModel, 'max_line_num', 1)</l>
+<l>*set_text_model_param (TextModel, 'eliminate_horizontal_lines', 'true')</l>
+<l>create_text_model_reader ('manual', [], TextModel)</l>
+<l>set_text_model_param (TextModel, 'polarity', 'light_on_dark')</l>
+<l>set_text_model_param (TextModel, 'is_dotprint', 'true')</l>
+<l>set_text_model_param (TextModel, 'char_width', 50)</l>
+<l>set_text_model_param (TextModel, 'char_height', 75)</l>
+<l>set_text_model_param (TextModel, 'stroke_width', 6.5)</l>
+<l>set_text_model_param (TextModel, 'uppercase_only', 'true')</l>
+<l>set_text_model_param (TextModel, 'fragment_size_min', 11)</l>
+<l>set_text_model_param (TextModel, 'eliminate_border_blobs', 'true')</l>
+<l>set_text_model_param (TextModel, 'base_line_tolerance', 0.2)</l>
+<l>set_text_model_param (TextModel, 'max_line_num', 2)</l>
+<l>set_text_model_param (TextModel, 'eliminate_horizontal_lines', 'true')</l>
+<c></c>
+<l>get_system ('clip_region', TmpCtrl_ClipRegion)</l>
+<l>set_system ('clip_region', 'false')</l>
+<l>set_system ('clip_region', TmpCtrl_ClipRegion)</l>
+<l>invert_image (Image_Char, TmpObj_MonoInverted_OCR_01_0)</l>
+<l>find_text (TmpObj_MonoInverted_OCR_01_0, TextModel, TmpCtrl_ResultHandle_OCR_01_0)</l>
+<c>* OCR 01: </c>
+<c>* OCR 01: Read text (classification step)</c>
+<c>* OCR 01: Gray values for reading must be dark on bright</c>
+<l>get_text_object (Symbols_OCR_01_0, TmpCtrl_ResultHandle_OCR_01_0, 'all_lines')</l>
+<l>clear_text_result (TmpCtrl_ResultHandle_OCR_01_0)</l>
+<l>dev_display (TmpObj_MonoInverted_OCR_01_0)</l>
+<l>dev_set_draw ('fill')</l>
+<l>dev_set_colored (3)</l>
+<l>dev_display (Symbols_OCR_01_0)</l>
+<l>do_ocr_multi_class_mlp (Symbols_OCR_01_0, TmpObj_MonoInverted_OCR_01_0, OcrHandle, SymbolNames_OCR_01_0, Confidences_OCR_01_0)</l>
+<c>* OCR 01: </c>
+<c>* OCR 01: Do something with the results</c>
+<c>* OCR 01: </c>
+<c>* OCR 01: Cleanup (global)</c>
+<l>clear_text_model (TextModel)</l>
+<l>clear_ocr_class_mlp (OcrHandle)</l>
+<c></c>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="character_recognition">
+<parameters>
+<parameter id="Confidences_OCR"/>
+<parameter id="Image_Char">
+<multichannel>false</multichannel>
+<multivalue>optional</multivalue>
+<sem_type>image</sem_type>
+<type_list>
+<item>byte</item>
+<item>int8</item>
+</type_list>
+</parameter>
+<parameter id="SymbolNames_OCR"/>
+<parameter id="Symbol_OCR">
+<multivalue>optional</multivalue>
+<sem_type>string</sem_type>
+<type_list>
+<item>string</item>
+</type_list>
+</parameter>
+</parameters>
+</docu>
+</procedure>
+<procedure name="character_markovfilter">
+<interface>
+<ic>
+<par name="Chars_In" base_type="ctrl" dimension="0"/>
+<par name="Markov_Lows" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="Chars_Out" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>    *character_markovfilter(未完成)</c>
+<l>return ()</l>
+</body>
+<docu id="character_markovfilter">
+<parameters>
+<parameter id="Chars_In">
+<multivalue>optional</multivalue>
+<sem_type>string</sem_type>
+<type_list>
+<item>string</item>
+</type_list>
+</parameter>
+<parameter id="Chars_Out">
+<multivalue>optional</multivalue>
+<sem_type>string</sem_type>
+<type_list>
+<item>string</item>
+</type_list>
+</parameter>
+<parameter id="Markov_Lows"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>
