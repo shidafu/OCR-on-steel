@@ -1,6 +1,6 @@
 % %%
-srcPath='D:\文字识别项目\20160715_gray\';
-dstPath='D:\文字识别项目\20160715_filtered\';
+srcPath='D:\OCR-on-steel\sample\20160714\';
+dstPath='D:\OCR-on-steel\sample\20160714_out\';
 [Num PathArray NameArray] =LoadBMPFiles(srcPath);
 leftName='';
 
