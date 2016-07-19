@@ -9,7 +9,7 @@ for i=1:Num
     leftNamelong=NameArray(i,:);
     leftName= StrDelTail(leftNamelong);
     leftNameLen=length(leftName)-4;
-    leftName=leftName(1,1:leftNameLen);
+    leftName=leftName(1,1:leftNameLen)
     name=[srcPath leftName '.bmp'];
     %A=imread(name);
     SingleProcess(leftName,srcPath,dstPath);

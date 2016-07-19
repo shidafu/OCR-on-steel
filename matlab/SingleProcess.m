@@ -16,8 +16,8 @@ else
         Gray=RGB;
     end
     Gray = Cut(Gray);
-    wname='db2';
-    maskMatrix=[1,1,1,1;1,1,1,1;1,1,1,1;1,1,1,1];
+    wname='db4';
+    maskMatrix=ones(64);
     [imageFiltered,imageDwted,imageDwtMasked,cellDwted,cellMasked,...
         imageInvFiltered,imageInvMasked,cellInvMasked] = WaveLetsFilter(Gray,wname,maskMatrix);
     save(distfilename,'Gray');
