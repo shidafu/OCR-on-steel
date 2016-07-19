@@ -6,12 +6,12 @@ if exist(srcfilename,'file')==0
     result=0;
     return;
 else
-    srcfilename=[srcPath fileName '.bmp']; 
+    srcfilename=[srcPath fileName '.bmp']; %是否和3,4行代码重复？
     distfilename=[dstPath fileName '.mat'];
     RGB=imread(srcfilename);
     [imgHeight imgWidth imgDeepth]=size(RGB);
-    if(imgDeepth>1) 
-        Gray=rgb2gray(RGB);
+    if(imgDeepth>1) %深度即通道数，决定是黑白图像还是彩色图像
+        Gray=rgb2gray(RGB);%将彩色图像转化为黑白图像
     else
         Gray=RGB;
     end

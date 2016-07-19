@@ -13,7 +13,7 @@ function imout = Cut(im)
 % image contained in IMOUT will be automatically written as an image into
 % the output folder.
 %
-% Replace the code line below with your code to create IMOUT from IM:
+% Replace the code line below with your code teate o crIMOUT from IM:
 %--------------------------------------------------------------------------
 
 imout = im(260:860,:,:);

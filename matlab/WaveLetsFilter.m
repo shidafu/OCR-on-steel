@@ -18,10 +18,10 @@ function [imageFiltered,imageDwted,imageDwtMasked,cellDwted,cellMasked,...
         error(message('WaveLetsFilter:maskMatrix:Invalid_Size'));
     end
     times=log2(hmask);
-    if(mod(times,1)~=0)
+    if(mod(times,1)~=0)%取余，判断matrix的维数是否是2的非负整数次幂
         error(message('WaveLetsFilter:maskMatrix:Invalid_Size'));
     end
-    times=uint(times);
+    times=uint(times);%unit 返回一个仿真类型数，表示一个非负好整型数
     if(hmask==2)
         [imageFiltered,imageDwted,imageDwtMasked,cellDwted,cellMasked,...
             imageInvFiltered,imageInvMasked,cellInvMasked]=WaveLetsFilter2X2(imageIn,wname,maskMatrix);
@@ -67,15 +67,15 @@ function [imageFiltered,imageDwted,imageDwtMasked,cellDwted,cellMasked,...
     end
     [cA,cH,cV,cD] = dwt2(imageIn,wname,'mode','sym');
     imageDwted=[cA,cH;cV,cD];
-    cellDwted={cA,cH;cV,cD};
-    cA=cA*maskMatrix(1,1);
-    cH=cH*maskMatrix(1,2);
-    cV=cV*maskMatrix(2,1);
-    cD=cD*maskMatrix(2,2);     
+    cellDwted={cA,cH;cV,cD};   
     icA=cA*(1-maskMatrix(1,1));
     icH=cH*(1-maskMatrix(1,2));
     icV=cV*(1-maskMatrix(2,1));
     icD=cD*(1-maskMatrix(2,2));
+    cA=cA*maskMatrix(1,1);
+    cH=cH*maskMatrix(1,2);
+    cV=cV*maskMatrix(2,1);
+    cD=cD*maskMatrix(2,2);  
     imageDwtMasked=[cA,cH;cV,cD];
     cellMasked={cA,cH;cV,cD};
     imageFiltered = idwt2(cA,cH,cV,cD,wname,[himage,wimage]);
