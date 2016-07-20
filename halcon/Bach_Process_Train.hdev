@@ -3,10 +3,117 @@
 <procedure name="main">
 <interface/>
 <body>
-<l>list_files ('D:/文字识别项目/南钢字符图/原始图像/新建文件夹', 'files', Files)</l>
-<l>savePath:= 'D:/文字识别项目/南钢字符图/原始图像/新建文件夹'</l>
+<l>full_sample:= 'D:/文字识别项目/南钢字符图/full_sample'</l>
+<l>part_sample:= 'D:/文字识别项目/南钢字符图/part_sample'</l>
+<l>part_sample_OCR:=part_sample+'\\part_sample_OCR.trf'</l>
+<c></c>
+<l>filtered_sample:= 'D:/文字识别项目/南钢字符图/filtered_sample'</l>
+<l>filtered_sample_OCR:=filtered_sample+'\\filtered_sample_OCR.trf'</l>
+<c></c>
+<l>file_OCR:='D:/文字识别项目/南钢字符图/Code/DotPrint.omc'</l>
+<l>read_ocr_class_mlp (file_OCR, file_OCR_Handle1)</l>
+<l>file_OCR_NoRej:='D:/文字识别项目/南钢字符图/Code/DotPrint_NoRej.omc'</l>
+<l>read_ocr_class_mlp (file_OCR_NoRej, file_OCR_NoRej_Handle1)</l>
+<l>file_OCR_09:='D:/文字识别项目/南钢字符图/Code/DotPrint_0-9.omc'</l>
+<l>read_ocr_class_mlp (file_OCR_09, file_OCR_09_Handle1)</l>
+<l>file_OCR_AZ:='D:/文字识别项目/南钢字符图/Code/DotPrint_A-Z+.omc'</l>
+<l>read_ocr_class_mlp (file_OCR_AZ, file_OCR_AZ_Handle1)</l>
+<l>file_OCR_09AZ:='D:/文字识别项目/南钢字符图/Code/DotPrint_0-9A-Z.omc'</l>
+<l>read_ocr_class_mlp (file_OCR_09AZ, file_OCR_09AZ_Handle1)</l>
+<c></c>
+<c></c>
+<c>*建议每个位置使用独立的逻辑替换矩阵</c>
+<c>*confidence To  ?-01~9A~Z:a~z</c>
+<c>*      From   ? 1</c>
+<c>*             -  1</c>
+<c>*             0   1</c>
+<c>*             ~     </c>
+<c>*             9      1</c>
+<c>*             A       1</c>
+<c>*             ~   </c>
+<c>*             Z         1</c>
+<c>*             : 1</c>
+<c>*             a 1</c>
+<c>*             ~          </c>
+<c>*             z 1</c>
+<c>*            </c>
+<c>*字符替换索引</c>
+<l>Chars_Defined:= '?-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ:abcdefghijklmnopqrstuvwxyz'</l>
+<c>*字符替换逻辑矩阵</c>
+<l>create_matrix (65, 65, 'identity', Default_Low)</l>
+<l>create_matrix (27, 1, 1, Fail_Low_Left)</l>
+<l>create_matrix (27, 64, 0, Fail_Low_Right)</l>
+<l>set_sub_matrix (Default_Low, Fail_Low_Left, 38, 0)</l>
+<l>set_sub_matrix (Default_Low, Fail_Low_Right, 38, 1)</l>
+<l>copy_matrix (Default_Low, Default_Low_09)</l>
+<l>copy_matrix (Default_Low, Default_Low_AZ)</l>
+<l>copy_matrix (Default_Low, Default_Low_)</l>
+<c>* 数字替换逻辑</c>
+<c>*替换: ':'-&gt;'1'</c>
+<l>tuple_strchr(Chars_Defined, ':', Index_ReplaceFrom)</l>
+<l>tuple_strchr(Chars_Defined, '1', Index_ReplaceTo)</l>
+<l>set_value_matrix (Default_Low_09, Index_ReplaceFrom, 0, 0)</l>
+<l>set_value_matrix (Default_Low_09, Index_ReplaceFrom, Index_ReplaceTo, 1)</l>
+<c>*替换: 'i'-&gt;'1'</c>
+<l>tuple_strchr(Chars_Defined, 'I', Index_ReplaceFrom)</l>
+<l>tuple_strchr(Chars_Defined, '1', Index_ReplaceTo)</l>
+<l>set_value_matrix (Default_Low_09, Index_ReplaceFrom, 0, 0)</l>
+<l>set_value_matrix (Default_Low_09, Index_ReplaceFrom, Index_ReplaceTo, 1)</l>
+<c>*替换: 'I'-&gt;'1'</c>
+<l>tuple_strchr(Chars_Defined, 'l', Index_ReplaceFrom)</l>
+<l>tuple_strchr(Chars_Defined, '1', Index_ReplaceTo)</l>
+<l>set_value_matrix (Default_Low_09, Index_ReplaceFrom, Index_ReplaceFrom, 0)</l>
+<l>set_value_matrix (Default_Low_09, Index_ReplaceFrom, Index_ReplaceTo, 1)</l>
+<c>*替换: 'L'-&gt;'1'</c>
+<l>tuple_strchr(Chars_Defined, 'L', Index_ReplaceFrom)</l>
+<l>tuple_strchr(Chars_Defined, '1', Index_ReplaceTo)</l>
+<l>set_value_matrix (Default_Low_09, Index_ReplaceFrom, Index_ReplaceFrom, 0)</l>
+<l>set_value_matrix (Default_Low_09, Index_ReplaceFrom, Index_ReplaceTo, 1)</l>
+<c>*替换: 'B'-&gt;'8'</c>
+<l>tuple_strchr(Chars_Defined, 'B', Index_ReplaceFrom)</l>
+<l>tuple_strchr(Chars_Defined, '8', Index_ReplaceTo)</l>
+<l>set_value_matrix (Default_Low_09, Index_ReplaceFrom, Index_ReplaceFrom, 0)</l>
+<l>set_value_matrix (Default_Low_09, Index_ReplaceFrom, Index_ReplaceTo, 1)</l>
+<c></c>
+<c>* 字符替换逻辑</c>
+<c>*替换: ':'-&gt;'I'</c>
+<l>tuple_strchr(Chars_Defined, ':', Index_ReplaceFrom)</l>
+<l>tuple_strchr(Chars_Defined, 'I', Index_ReplaceTo)</l>
+<l>set_value_matrix (Default_Low_AZ, Index_ReplaceFrom, 0, 0)</l>
+<l>set_value_matrix (Default_Low_AZ, Index_ReplaceFrom, Index_ReplaceTo, 1)</l>
+<c>*替换: '1'-&gt;'I'</c>
+<l>tuple_strchr(Chars_Defined, '1', Index_ReplaceFrom)</l>
+<l>tuple_strchr(Chars_Defined, 'I', Index_ReplaceTo)</l>
+<l>set_value_matrix (Default_Low_AZ, Index_ReplaceFrom, Index_ReplaceFrom, 0)</l>
+<l>set_value_matrix (Default_Low_AZ, Index_ReplaceFrom, Index_ReplaceTo, 1)</l>
+<c>*替换: 'i'-&gt;'I'</c>
+<l>tuple_strchr(Chars_Defined, 'i', Index_ReplaceFrom)</l>
+<l>tuple_strchr(Chars_Defined, 'I', Index_ReplaceTo)</l>
+<l>set_value_matrix (Default_Low_AZ, Index_ReplaceFrom, 0, 0)</l>
+<l>set_value_matrix (Default_Low_AZ, Index_ReplaceFrom, Index_ReplaceTo, 1)</l>
+<c>*替换: '8'-&gt;'B'</c>
+<l>tuple_strchr(Chars_Defined, '8', Index_ReplaceFrom)</l>
+<l>tuple_strchr(Chars_Defined, 'B', Index_ReplaceTo)</l>
+<l>set_value_matrix (Default_Low_AZ, Index_ReplaceFrom, Index_ReplaceFrom, 0)</l>
+<l>set_value_matrix (Default_Low_AZ, Index_ReplaceFrom, Index_ReplaceTo, 1)</l>
+<c></c>
+<c>* 标点替换逻辑</c>
+<c>*替换: all-&gt;'-'</c>
+<l>create_matrix (65, 65, 1, Default_Low_)</l>
+<l>create_matrix (65, 1, 0, Fail_Low_Left)</l>
+<l>create_matrix (65, 63, 0, Fail_Low_Right)</l>
+<l>set_sub_matrix (Default_Low_, Fail_Low_Left, 0, 0)</l>
+<l>set_sub_matrix (Default_Low_, Fail_Low_Right, 0, 2)</l>
+<c></c>
+<c></c>
+<l>dst:= 'D:/文字识别项目/南钢字符图/dst'</l>
+<l>read_ocr_class_mlp ('D:/文字识别项目/南钢字符图/Code/DotPrint_NoRej.omc', OCRHandle)</l>
+<l>list_files (full_sample, 'files', Files)</l>
 <l>for k := 0 to |Files| - 1 by 1</l>
-<l>    read_image (Image, Files[k])</l>
+<l>    full_sample_file:=Files[k]</l>
+<l>    part_sample_file:=Files[k]</l>
+<l>    filtered_sample_file:=Files[k]</l>
+<l>    read_image (Image, full_sample_file)</l>
 <l>    count_channels (Image, Channels)</l>
 <l>    if(Channels==3)</l>
 <l>        decompose3(Image,ImageR,ImageG,ImageB)</l>
@@ -16,26 +123,94 @@
 <l>        ImageGray:=Image</l>
 <l>    endif</l>
 <c>        </c>
-<c>    *FFT高通滤波-&gt;sobel算子-&gt;阈值化+形态学提取字符区域</c>
-<l>    character_locate (ImageGray, ImageRotate_Char, ImageRotate_Char_fftfiltered, 100, 60, 8, 200, 1000, 40, 200, 5000, 99999, 0.65, 0.001, 1.5, 20, 20)</l>
-<c>    *字符串定位测试100%</c>
-<c>    </c>
-<c></c>
-<c>    </c>
-<c>    *FFT高通滤波-&gt;sobel算子-&gt;阈值化+形态学提取字符区域</c>
-<l>*    single_locate (ImageRotate_Char_fftfiltered, Char_Regions, 8, 200, 1000, 40, 200, 5000, 99999, 0.65, 0.001, 1.5)</l>
-<c>    *字符定位测试100%</c>
-<c>    </c>
+<c>    *字符串定位   *测试100%:FFT高通滤波-&gt;sobel算子-&gt;阈值化+形态学提取字符区域</c>
+<l>    string_locate (ImageGray, ImageRotate_Char, ImageRotate_Char_fftfiltered, 100, 60, 8, 200, 1000, 40, 200, 5000, 99999, 0.65, 0.001, 1.5, 20, 20)</l>
+<c>       </c>
+<c>    *保存中间结果</c>
+<l>    tuple_regexp_replace(part_sample_file,full_sample+'*.',part_sample+'\\$1', part_sample_file)</l>
+<l>    write_image (ImageRotate_Char, 'bmp', -1, part_sample_file)</l>
+<l>    tuple_regexp_replace(filtered_sample_file,full_sample+'*.',filtered_sample+'\\$1', filtered_sample_file)</l>
+<l>    write_image (ImageRotate_Char_fftfiltered, 'bmp', -1, filtered_sample_file)</l>
 <c>    </c>
 <c>    *宽松的FFT高通滤波以识别</c>
-<l>*    filter_fftbandpass (ImageRotate_Char, ImageRotate_Char_fftfiltered_2, 0.0001, 2.0, 'dc_edge')</l>
-<c>        </c>
-<c>    *定制OCR识别字符(未完成)</c>
-<l>*    character_recognition (ImageRotate_Char, Symbols_OCR, SymbolNames_OCR, Confidences_OCR)</l>
-<c>   </c>
-<c>    *字符条件判断(未完成)</c>
-<l>*    Markov_Lows:=0</l>
-<l>*    character_markovfilter (Chars, Markov_Lows, Chars)</l>
+<l>    filter_fftbandpass (ImageRotate_Char, ImageRotate_Char_fftfiltered_2, 0.001, 2.0, 'dc_edge')</l>
+<c>      </c>
+<c>    *字符定位    *输出并列顺序矩形区域</c>
+<l>    character_locate (ImageRotate_Char_fftfiltered_2, Chars_Regions, Image_Prepeared, 40, 20, 2.5, 35, 1, 2.0)</l>
+<c>    </c>
+<c>    *字符串同时识别</c>
+<l>    *string_recognition (Image_Prepeared, Chars_Regions, file_OCR_NoRej_Handle1, String_Out, String_Confidence)</l>
+<c>    </c>
+<c>    *独立位置定制OCR识别字符</c>
+<l>    count_obj(Chars_Regions,Chars_Regions_num)</l>
+<l>    Chars_Out:=gen_tuple_const(Chars_Regions_num,'?')</l>
+<l>    Chars_Confidence:=gen_tuple_const(Chars_Regions_num,1)</l>
+<l>    Filter_Place_Threshold:=gen_tuple_const(Chars_Regions_num,0) </l>
+<c>    *根据位置选择不同的OCR分类器  </c>
+<c>    *case: 0 file_OCR_NoRej_Handle1</c>
+<c>    *case: 1 file_OCR_09_Handle1</c>
+<c>    *case: 2 file_OCR_AZ_Handle1</c>
+<c>    *case: 3 file_OCR_NoRej_Handle1</c>
+<l>    OCR_Place_Type:=[0,0,0,0,0,1,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]</l>
+<c>    *字符替换索引</c>
+<l>    *Chars_Defined:= ['?-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ:abcdefghijklmnopqrstuvwxyz']</l>
+<c>    *字符替换逻辑  *建议每个位置使用独立的逻辑替换矩阵</c>
+<c>    *case: 0 Default_Low</c>
+<c>    *case: 1 Default_Low_09</c>
+<c>    *case: 2 Default_Low_AZ</c>
+<c>    *case: 3 Default_Low_</c>
+<l>    Filter_Place_Lows:=[1,1,2,1,1,1,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]</l>
+<c>    </c>
+<l>    for i := 0 to Chars_Regions_num - 1 by 1</l>
+<l>        select_obj (Chars_Regions, Chars_Regions_Selected, i+1)</l>
+<l>        dev_display (Image_Prepeared)</l>
+<l>        dev_display (Chars_Regions_Selected)</l>
+<l>        switch (OCR_Place_Type[i])</l>
+<l>        case 0:</l>
+<l>            character_recognition (Image_Prepeared, Chars_Regions_Selected, file_OCR_NoRej_Handle1, Char_OutList, Char_ConfidenceList)</l>
+<l>            break</l>
+<l>        case 1:</l>
+<l>            character_recognition (Image_Prepeared, Chars_Regions_Selected, file_OCR_09_Handle1, Char_OutList, Char_ConfidenceList)</l>
+<l>            break</l>
+<l>        case 2:</l>
+<l>            character_recognition (Image_Prepeared, Chars_Regions_Selected, file_OCR_AZ_Handle1, Char_OutList, Char_ConfidenceList)</l>
+<l>            break</l>
+<l>        case 3:</l>
+<l>            character_recognition (Image_Prepeared, Chars_Regions_Selected, file_OCR_NoRej_Handle1, Char_OutList, Char_ConfidenceList)</l>
+<l>            break</l>
+<l>        default:</l>
+<l>            character_recognition (Image_Prepeared, Chars_Regions_Selected, file_OCR_NoRej_Handle1, Char_OutList, Char_ConfidenceList)</l>
+<l>            break</l>
+<l>        endswitch</l>
+<l>        *do_ocr_single_class_mlp (Chars_Regions_Selected, ImageRotate_Char_fftfiltered_2, OCR_Place_Type[i], 4, Char_OutList, Char_ConfidenceList)</l>
+<l>        switch (Filter_Place_Lows[i])</l>
+<l>        case 0:</l>
+<l>            character_filter (Char_OutList, Char_ConfidenceList, Filter_Place_Threshold[i], Default_Low, Char_Out, Char_Confidence)</l>
+<l>            break</l>
+<l>        case 1:</l>
+<l>            character_filter (Char_OutList, Char_ConfidenceList, Filter_Place_Threshold[i], Default_Low_09, Char_Out, Char_Confidence)</l>
+<l>            break</l>
+<l>        case 2:</l>
+<l>            character_filter (Char_OutList, Char_ConfidenceList, Filter_Place_Threshold[i], Default_Low_AZ, Char_Out, Char_Confidence)</l>
+<l>            break</l>
+<l>        case 3:</l>
+<l>            character_filter (Char_OutList, Char_ConfidenceList, Filter_Place_Threshold[i], Default_Low_, Char_Out, Char_Confidence)</l>
+<l>            break</l>
+<l>        default:</l>
+<l>            character_filter (Char_OutList, Char_ConfidenceList, Filter_Place_Threshold[i], Default_Low, Char_Out, Char_Confidence)</l>
+<l>            break</l>
+<l>        endswitch</l>
+<l>        Chars_Out[i]:=Char_Out</l>
+<l>        Chars_Confidence[i]:=Char_Confidence</l>
+<l>    endfor</l>
+<c>    </c>
+<c>    *保存样本集</c>
+<l>    smallest_rectangle1 (Chars_Regions, Row1_1, Column1_1, Row2_1, Column2_1)  </l>
+<l>    for i := 0 to Chars_Regions_num - 1 by 1</l>
+<l>        gen_rectangle1 (Rectangle, Row1_1[i], Column1_1[i], Row2_1[i], Column2_1[i])</l>
+<l>        append_ocr_trainf (Rectangle, ImageRotate_Char, Chars_Out[i], part_sample_OCR)</l>
+<l>        append_ocr_trainf (Rectangle, ImageRotate_Char_fftfiltered_2, Chars_Out[i], filtered_sample_OCR)</l>
+<l>    endfor</l>
 <l>endfor</l>
 </body>
 <docu id="main">
@@ -120,7 +295,7 @@
 </parameters>
 </docu>
 </procedure>
-<procedure name="character_locate">
+<procedure name="string_locate">
 <interface>
 <io>
 <par name="ImageGray" base_type="iconic" dimension="0"/>
@@ -154,7 +329,7 @@
 <l>get_image_size (ImageGray_2D, Width_Src, Height_src)</l>
 <l>crop_rectangle1 (ImageGray_2D, ImagePart_Steel, Cut_Top, 0, Height_src-Cut_Botton, Width_Src)</l>
 <c>* ****严格的FFT高通滤波以实现定位</c>
-<l>filter_fftbandpass (ImagePart_Steel, ImagePart_Steel_fftfiltered, FFTBand_Low, FFTBand_High, 'dc_edge')</l>
+<l>filter_fftbandpass (ImagePart_Steel, ImagePart_Steel_fftfiltered, 0.001, 1.0, 'dc_edge')</l>
 <c>* 图像预处理-找字符区域</c>
 <l>get_image_size (ImagePart_Steel, Width_Steel, Height_Steel)</l>
 <l>sobel_amp (ImagePart_Steel, EdgeAmplitude_Steel, 'sum_abs', 3)</l>
@@ -221,9 +396,8 @@
 <l>                if(Mean_Char_S-Mean_Char_R&gt;10)</l>
 <l>                    ImageRotate_Char:=ImagePart_Char</l>
 <l>                    ImageRotate_Char_fftfiltered:=ImagePart_Char_fftfiltered</l>
-<l>                endif</l>
-<l>                full_domain (ImageRotate_Char, ImageRotate_Char)</l>
-<l>                full_domain (ImageRotate_Char_fftfiltered, ImageRotate_Char_fftfiltered)</l>
+<l>                endif  </l>
+<c>                </c>
 <c>                * 应该输出图像数组，但不会数组声明和赋值方法，暂时只输出单幅图像</c>
 <l>*                 ImageRotate_Char[findNum] := ImagePart_Char</l>
 <c>                * 应该输出图像数组，但不会数组声明和赋值方法，暂时只输出单幅图像</c>
@@ -235,7 +409,7 @@
 <l>endif</l>
 <l>return ()</l>
 </body>
-<docu id="character_locate">
+<docu id="string_locate">
 <parameters>
 <parameter id="Areas_Max">
 <default_value>1000</default_value>
@@ -406,132 +580,438 @@
 </parameters>
 </docu>
 </procedure>
-<procedure name="character_recognition">
+<procedure name="character_locate">
 <interface>
 <io>
-<par name="Image_Char" base_type="iconic" dimension="0"/>
+<par name="Image_In" base_type="iconic" dimension="0"/>
 </io>
-<oc>
-<par name="Symbol_OCR" base_type="ctrl" dimension="0"/>
-<par name="SymbolNames_OCR" base_type="ctrl" dimension="0"/>
-<par name="Confidences_OCR" base_type="ctrl" dimension="0"/>
-</oc>
+<oo>
+<par name="Chars_Regions" base_type="iconic" dimension="0"/>
+<par name="Image_Prepeared" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="min_max_percent" base_type="ctrl" dimension="0"/>
+<par name="threshold_add" base_type="ctrl" dimension="0"/>
+<par name="closing_radius" base_type="ctrl" dimension="0"/>
+<par name="select_shape_area" base_type="ctrl" dimension="0"/>
+<par name="width_overlap" base_type="ctrl" dimension="0"/>
+<par name="width_overdouble" base_type="ctrl" dimension="0"/>
+</ic>
 </interface>
 <body>
 <c>*character_recognition(未完成)</c>
-<c>* OCR 01: Load classifier</c>
-<l>read_ocr_class_mlp ('D:/文字识别项目/南钢字符图/Code/WL20160714.omc', OcrHandle)</l>
-<l>read_image (Image_Char, 'D:/文字识别项目/南钢字符图/test1.bmp')</l>
-<l>count_channels (Image_Char, Channels)</l>
-<l>if(Channels==3)</l>
-<l>    decompose3(Image_Char,ImageR,ImageG,ImageB)</l>
-<l>    trans_from_rgb(ImageR,ImageG,ImageB,ImageResult1, ImageResult2, ImageResult3, 'hsv')</l>
-<l>    rgb3_to_gray (Image_Char, Image_Char, Image_Char, Image_Char)</l>
-<l>else</l>
-<l>    Image_Char:=Image_Char</l>
-<l>endif</l>
-<c>* OCR 01: Code generated by OCR 01</c>
-<c>* OCR 01: </c>
-<c>* OCR 01: Prepare text model</c>
-<c>* OCR 01: </c>
-<l>* create_text_model_reader ('auto', 'D:/文字识别项目/南钢字符图/Code/WL20160714.omc', TextModel)</l>
-<l>* set_text_model_param (TextModel, 'polarity', 'light_on_dark')</l>
-<l>* set_text_model_param (TextModel, 'is_dotprint', 'true')</l>
-<l>* set_text_model_param (TextModel, 'min_char_width', 40)</l>
-<l>* set_text_model_param (TextModel, 'min_char_height', 65)</l>
-<l>* set_text_model_param (TextModel, 'min_stroke_width', 5.0)</l>
-<l>* set_text_model_param (TextModel, 'max_char_width', 60)</l>
-<l>* set_text_model_param (TextModel, 'max_char_height', 85)</l>
-<l>* set_text_model_param (TextModel, 'max_stroke_width', 8.0)</l>
-<l>*set_text_model_param (TextModel, 'uppercase_only', 'true')</l>
-<l>*set_text_model_param (TextModel, 'fragment_size_min', 11)</l>
-<l>* set_text_model_param (TextModel, 'eliminate_border_blobs', 'true')</l>
-<l>* set_text_model_param (TextModel, 'base_line_tolerance', 0.2)</l>
-<l>*set_text_model_param (TextModel, 'max_line_num', 1)</l>
-<l>*set_text_model_param (TextModel, 'eliminate_horizontal_lines', 'true')</l>
-<l>create_text_model_reader ('manual', [], TextModel)</l>
-<l>set_text_model_param (TextModel, 'polarity', 'light_on_dark')</l>
-<l>set_text_model_param (TextModel, 'is_dotprint', 'true')</l>
-<l>set_text_model_param (TextModel, 'char_width', 50)</l>
-<l>set_text_model_param (TextModel, 'char_height', 75)</l>
-<l>set_text_model_param (TextModel, 'stroke_width', 6.5)</l>
-<l>set_text_model_param (TextModel, 'uppercase_only', 'true')</l>
-<l>set_text_model_param (TextModel, 'fragment_size_min', 11)</l>
-<l>set_text_model_param (TextModel, 'eliminate_border_blobs', 'true')</l>
-<l>set_text_model_param (TextModel, 'base_line_tolerance', 0.2)</l>
-<l>set_text_model_param (TextModel, 'max_line_num', 2)</l>
-<l>set_text_model_param (TextModel, 'eliminate_horizontal_lines', 'true')</l>
-<c></c>
-<l>get_system ('clip_region', TmpCtrl_ClipRegion)</l>
-<l>set_system ('clip_region', 'false')</l>
-<l>set_system ('clip_region', TmpCtrl_ClipRegion)</l>
-<l>invert_image (Image_Char, TmpObj_MonoInverted_OCR_01_0)</l>
-<l>find_text (TmpObj_MonoInverted_OCR_01_0, TextModel, TmpCtrl_ResultHandle_OCR_01_0)</l>
-<c>* OCR 01: </c>
-<c>* OCR 01: Read text (classification step)</c>
-<c>* OCR 01: Gray values for reading must be dark on bright</c>
-<l>get_text_object (Symbols_OCR_01_0, TmpCtrl_ResultHandle_OCR_01_0, 'all_lines')</l>
-<l>clear_text_result (TmpCtrl_ResultHandle_OCR_01_0)</l>
-<l>dev_display (TmpObj_MonoInverted_OCR_01_0)</l>
-<l>dev_set_draw ('fill')</l>
-<l>dev_set_colored (3)</l>
-<l>dev_display (Symbols_OCR_01_0)</l>
-<l>do_ocr_multi_class_mlp (Symbols_OCR_01_0, TmpObj_MonoInverted_OCR_01_0, OcrHandle, SymbolNames_OCR_01_0, Confidences_OCR_01_0)</l>
-<c>* OCR 01: </c>
-<c>* OCR 01: Do something with the results</c>
-<c>* OCR 01: </c>
-<c>* OCR 01: Cleanup (global)</c>
-<l>clear_text_model (TextModel)</l>
-<l>clear_ocr_class_mlp (OcrHandle)</l>
-<c></c>
-<c></c>
+<c>*图像进行反向操作，因为halcon字符识别要求白底黑字</c>
+<l>invert_image (Image_In, Image_Prepeared)</l>
+<c>*得到图像大小</c>
+<l>get_image_size (Image_In, Width_Chars, Height_Chars)</l>
+<c>*计算阈值大小</c>
+<l>gen_rectangle1 (Rectangle_Char, 0, 0, Height_Chars, Width_Chars)</l>
+<l>min_max_gray (Rectangle_Char, Image_In, min_max_percent, Min_Char, Max_Char, Range)</l>
+<l>threshold (Image_In, Region_Char, Min_Char+threshold_add, 255)</l>
+<c>*使字符尽量连接起来</c>
+<l>closing_circle (Region_Char, RegionClosing_Char, closing_radius)</l>
+<c>*选择字符</c>
+<l>connection (RegionClosing_Char, ConnectedRegions_Char) </l>
+<l>select_shape (ConnectedRegions_Char, SelectedRegions_Char, 'area', 'and', select_shape_area, 99999)               </l>
+<c>*找大的字符来确定字符的中心位置</c>
+<l>select_shape (SelectedRegions_Char, SelectedRegions_Char_BigArea, 'area', 'and', 200, 99999)</l>
+<c>*计算数量防治报错</c>
+<l>count_obj (SelectedRegions_Char, Number_Select1)</l>
+<l>count_obj (SelectedRegions_Char_BigArea, Number_Select_BigArea)</l>
+<l>if(Number_Select1&gt;0 and Number_Select_BigArea&gt;0)</l>
+<c>    *找大的字符来确定字符的中心位置</c>
+<l>    region_features (SelectedRegions_Char_BigArea, 'row', Value_Center_Y)               </l>
+<l>    tuple_mean (Value_Center_Y, Mean)</l>
+<l>    tuple_deviation (Value_Center_Y, Deviation)</l>
+<c>    *选择接近中心的字符</c>
+<l>    select_shape (SelectedRegions_Char, SelectedRegions_Char2, ['row','column'], 'and', [Mean-(Deviation+10),Width_Chars*0.05], [Mean+(Deviation+10),Width_Chars*0.95])</l>
+<c>    </c>
+<l>    count_obj (SelectedRegions_Char2, Number_Char) </l>
+<l>    if(Number_Char&gt;4 and Deviation&lt;15)</l>
+<l>        *read_ocr_class_mlp ('D:/文字识别项目/南钢字符图/Code/DotPrint_NoRej.omc', OCRHandle)</l>
+<c>        *图像进行反向操作，因为halcon字符识别要求白底黑字</c>
+<l>        invert_image (Image_In, ImageInvert_Char_Img)</l>
+<l>        enhance_contrast (SelectedRegions_Char2, ImageInvert_Char_Img, Image_Prepeared)</l>
+<c>        *将字符全体连接起来，然后按间距进行分割</c>
+<l>        union1 (SelectedRegions_Char2, RegionUnion_Char)                                   </l>
+<l>        partition_dynamic (RegionUnion_Char, Partitioned_Char, 25, 80)  </l>
+<l>        partition_dynamic (Partitioned_Char, Partitioned_Char1, 25, 80) </l>
+<c>        *滤除面积小的区域的干扰</c>
+<l>        select_shape (Partitioned_Char1, SelectedRegions_Char3, 'area', 'and', 10, 99999)</l>
+<c>                      </c>
+<l>        count_obj (SelectedRegions_Char3, Number_Select2)</l>
+<l>        if(Number_Select2&gt;0)</l>
+<c>            *测试那种字符分割的好就选哪种，防止有时两个字符连在一起的现象，但还是不可完全避免</c>
+<l>            region_features (SelectedRegions_Char3, 'width', Value_Width_Chars3)               </l>
+<l>            tuple_max (Value_Width_Chars3, Max_Char3)</l>
+<l>            region_features (SelectedRegions_Char2, 'width', Value_Width_Chars2)               </l>
+<l>            tuple_max (Value_Width_Chars2, Max_Char2)</l>
+<l>            if(Max_Char3-Max_Char2&gt;20)</l>
+<l>                sort_region (SelectedRegions_Char2, SortedRegions_Char, 'character', 'true', 'column')</l>
+<l>            else</l>
+<l>                sort_region (SelectedRegions_Char3, SortedRegions_Char, 'character', 'true', 'column')</l>
+<l>            endif</l>
+<c>            *扩展字符到外接矩形</c>
+<l>            select_shape (SortedRegions_Char, SortedRectangle1_Char, ['area','width'], 'and', [2,1], [5000,100])</l>
+<l>            smallest_rectangle1 (SortedRectangle1_Char, Row1_1, Column1_1, Row2_1, Column2_1)</l>
+<c>            *扩展字符上下边界</c>
+<l>            Row1_1_min:=min(Row1_1)</l>
+<l>            for k := 0 to |Row1_1| - 1 by 1</l>
+<l>                Row1_1[k]:=Row1_1_min</l>
+<l>            endfor</l>
+<l>            Row2_1_max:=max(Row2_1)</l>
+<l>            for k := 0 to |Row2_1| - 1 by 1</l>
+<l>                Row2_1[k]:=Row2_1_max</l>
+<l>            endfor</l>
+<c>            *优化字符左右边界,width_overlap为允许重叠区域</c>
+<l>            *width_overlap:=1</l>
+<l>            for k := 0 to |Row1_1| - 2 by 1</l>
+<l>                Column2_1[k]:=mean([Column2_1[k],Column1_1[k+1]])+width_overlap</l>
+<l>                Column1_1[k+1]:=Column2_1[k]-2*width_overlap</l>
+<l>            endfor</l>
+<c>            *计算字符宽度,切分宽字符</c>
+<l>            *width_overdouble:=2.0</l>
+<l>            charwidth:=Column2_1-Column1_1</l>
+<l>            mean_charwidth:=mean(charwidth)</l>
+<l>            Row1_2:=Row1_1</l>
+<l>            Column1_2:=Column1_1</l>
+<l>            Row2_2:=Row2_1</l>
+<l>            Column2_2:=Column2_1</l>
+<c>            </c>
+<l>            for k := 0 to |charwidth| - 1 by 1</l>
+<l>                if (charwidth[k]&gt;mean_charwidth*width_overdouble)</l>
+<l>                    Row1_2:=[Row1_2,Row1_1[k]]</l>
+<l>                    Row2_2:=[Row2_2,Row2_1[k]]</l>
+<l>                    Column1_2:=[Column1_2,Column1_1[k]+charwidth[k]/2-width_overlap]                    </l>
+<l>                    Column2_2:=[Column2_2,Column2_1[k]]</l>
+<l>                    Column2_2[k]:=Column2_1[k]-charwidth[k]/2+width_overlap</l>
+<l>                endif</l>
+<l>            endfor</l>
+<l>            gen_rectangle1 (Chars_Regions, Row1_1, Column1_1, Row2_1, Column2_1)</l>
+<l>            sort_region (Chars_Regions, Chars_Regions, 'upper_left', 'true', 'column')</l>
+<c>            *使用外界矩形进行字符识别,明显提高了识别准确率</c>
+<l>            *do_ocr_multi_class_mlp (Chars_Regions, Image_Prepeared, OCRHandle, Chars, Chars_Confidence)       </l>
+<l>        endif</l>
+<l>    endif            </l>
+<l>endif         </l>
 <l>return ()</l>
 </body>
-<docu id="character_recognition">
+<docu id="character_locate">
 <parameters>
-<parameter id="Confidences_OCR"/>
-<parameter id="Image_Char">
+<parameter id="Chars_Regions">
+<multivalue>true</multivalue>
+<sem_type>region</sem_type>
+</parameter>
+<parameter id="Image_In">
 <multichannel>false</multichannel>
-<multivalue>optional</multivalue>
+<multivalue>false</multivalue>
 <sem_type>image</sem_type>
 <type_list>
 <item>byte</item>
 <item>int8</item>
 </type_list>
 </parameter>
-<parameter id="SymbolNames_OCR"/>
-<parameter id="Symbol_OCR">
+<parameter id="Image_Prepeared"/>
+<parameter id="closing_radius">
+<default_value>2.5</default_value>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_min>0.000000</value_min>
+</parameter>
+<parameter id="min_max_percent">
+<default_value>40</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>100</value_max>
+<value_min>0</value_min>
+</parameter>
+<parameter id="select_shape_area">
+<default_value>35</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>999999</value_max>
+<value_min>1</value_min>
+</parameter>
+<parameter id="threshold_add">
+<default_value>20</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>255</value_max>
+<value_min>0</value_min>
+</parameter>
+<parameter id="width_overdouble">
+<default_value>2.0</default_value>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_min>1.500000</value_min>
+</parameter>
+<parameter id="width_overlap">
+<default_value>0</default_value>
+<multivalue>false</multivalue>
+<sem_type>integer</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+<value_max>8</value_max>
+<value_min>-8</value_min>
+</parameter>
+</parameters>
+</docu>
+</procedure>
+<procedure name="character_filter">
+<interface>
+<ic>
+<par name="Char_InList" base_type="ctrl" dimension="0"/>
+<par name="Char_ConfidenceList" base_type="ctrl" dimension="0"/>
+<par name="Filter_Threshold" base_type="ctrl" dimension="0"/>
+<par name="Filter_Lows" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="Char_Out" base_type="ctrl" dimension="0"/>
+<par name="Char_Confidence" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>*Filter_Lows</c>
+<c>*Char_InList</c>
+<c>*Char_ConfidenceList</c>
+<c>*Filter_Threshold</c>
+<c>*Filter_Lows</c>
+<c>*Char_Out</c>
+<c>*Char_Confidence</c>
+<c></c>
+<c>*建议每个位置使用独立的逻辑替换矩阵</c>
+<c>*confidence To  ?-01~9A~Z:a~z</c>
+<c>*      From   ? 1</c>
+<c>*             -  1</c>
+<c>*             0   1</c>
+<c>*             ~     </c>
+<c>*             9      1</c>
+<c>*             A       1</c>
+<c>*             ~   </c>
+<c>*             Z         1</c>
+<c>*             : 1</c>
+<c>*             a 1</c>
+<c>*             ~          </c>
+<c>*             z 1</c>
+<c></c>
+<c>*增加阈值过滤,和不确定类？</c>
+<l>Chars_Defined:= '?-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ:abcdefghijklmnopqrstuvwxyz'</l>
+<c>*存储替换权值的稀疏矩阵</c>
+<l>tuple_strchr(Chars_Defined, Char_InList[0], Index_ReplaceFrom)</l>
+<l>get_sub_matrix (Filter_Lows, Index_ReplaceFrom, 0, 1, 65, Filter_Lows_Sub)</l>
+<l>*tuple_sort_index(Filter_Lows_Sub,Index_ReplaceTo)</l>
+<l>Index_ReplaceTo:=0</l>
+<l>for pos:=0 to 64 by 1</l>
+<l>    get_value_matrix (Filter_Lows_Sub, 0, pos, Value)</l>
+<l>    if (Value==1)</l>
+<l>        Index_ReplaceTo:=pos</l>
+<l>        break</l>
+<l>    endif</l>
+<l>endfor</l>
+<c></c>
+<l>tuple_substr (Chars_Defined, Index_ReplaceTo, Index_ReplaceTo, Char_Out)</l>
+<l>Char_Confidence:=0</l>
+<l>for Index := 0 to |Char_InList|-1 by 1</l>
+<l>    if (Char_InList[Index]==Char_Out)</l>
+<l>        Char_Confidence:=Char_ConfidenceList[Index]</l>
+<l>    endif</l>
+<l>endfor</l>
+<l>return ()</l>
+</body>
+<docu id="character_filter">
+<parameters>
+<parameter id="Char_Confidence">
+<mixed_type>false</mixed_type>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>1.000000</value_max>
+</parameter>
+<parameter id="Char_ConfidenceList">
+<mixed_type>false</mixed_type>
+<multivalue>optional</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>1.000000</value_max>
+<value_min>0.000000</value_min>
+</parameter>
+<parameter id="Char_InList">
+<mixed_type>false</mixed_type>
 <multivalue>optional</multivalue>
 <sem_type>string</sem_type>
 <type_list>
 <item>string</item>
 </type_list>
 </parameter>
+<parameter id="Char_Out">
+<mixed_type>false</mixed_type>
+<multivalue>false</multivalue>
+<sem_type>string</sem_type>
+<type_list>
+<item>string</item>
+</type_list>
+</parameter>
+<parameter id="Filter_Lows">
+<mixed_type>false</mixed_type>
+<multivalue>false</multivalue>
+<sem_type>matrix</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+</parameter>
+<parameter id="Filter_Threshold">
+<mixed_type>false</mixed_type>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>1.000000</value_max>
+</parameter>
 </parameters>
 </docu>
 </procedure>
-<procedure name="character_markovfilter">
+<procedure name="enhance_contrast">
 <interface>
+<io>
+<par name="Chars" base_type="iconic" dimension="0"/>
+<par name="ImageInvert" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="ImageScaleMax" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<l>union1 (Chars, RegionUnion)</l>
+<l>paint_region (RegionUnion, ImageInvert, ImageScaleMax, 10, 'fill')</l>
+<l>return ()</l>
+</body>
+<docu id="enhance_contrast">
+<parameters>
+<parameter id="Chars"/>
+<parameter id="ImageInvert"/>
+<parameter id="ImageScaleMax"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="character_recognition">
+<interface>
+<io>
+<par name="Char_Image" base_type="iconic" dimension="0"/>
+<par name="Char_Region" base_type="iconic" dimension="0"/>
+</io>
 <ic>
-<par name="Chars_In" base_type="ctrl" dimension="0"/>
-<par name="Markov_Lows" base_type="ctrl" dimension="0"/>
+<par name="OCRHandle" base_type="ctrl" dimension="0"/>
 </ic>
 <oc>
-<par name="Chars_Out" base_type="ctrl" dimension="0"/>
+<par name="Char_OutList" base_type="ctrl" dimension="0"/>
+<par name="Char_ConfidenceList" base_type="ctrl" dimension="0"/>
 </oc>
 </interface>
 <body>
-<c>    *character_markovfilter(未完成)</c>
+<c>*进行字符识别</c>
+<l>do_ocr_single_class_mlp (Char_Region, Char_Image, OCRHandle, 4, Char_OutList, Char_ConfidenceList)</l>
 <l>return ()</l>
 </body>
-<docu id="character_markovfilter">
+<docu id="character_recognition">
 <parameters>
-<parameter id="Chars_In">
+<parameter id="Char_ConfidenceList">
+<multivalue>optional</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_min>0.000000</value_min>
+</parameter>
+<parameter id="Char_Image">
+<multichannel>false</multichannel>
+<multivalue>false</multivalue>
+<sem_type>image</sem_type>
+<type_list>
+<item>byte</item>
+<item>int8</item>
+</type_list>
+</parameter>
+<parameter id="Char_OutList">
 <multivalue>optional</multivalue>
 <sem_type>string</sem_type>
 <type_list>
 <item>string</item>
 </type_list>
+</parameter>
+<parameter id="Char_Region">
+<multivalue>false</multivalue>
+<sem_type>region</sem_type>
+</parameter>
+<parameter id="OCRHandle">
+<mixed_type>false</mixed_type>
+<multivalue>false</multivalue>
+<sem_type>ocr_mlp</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+</parameter>
+</parameters>
+</docu>
+</procedure>
+<procedure name="string_filter">
+<interface/>
+<body>
+<l>return ()</l>
+</body>
+<docu id="string_filter">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="string_recognition">
+<interface>
+<io>
+<par name="String_Image" base_type="iconic" dimension="0"/>
+<par name="Chars_Regions" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="OCRHandle" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="Chars_Out" base_type="ctrl" dimension="0"/>
+<par name="Chars_Char_Confidence" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>*进行字符串识别</c>
+<l>do_ocr_multi_class_mlp (Chars_Regions, String_Image, OCRHandle, Chars_Out, Chars_Char_Confidence)</l>
+<l>return ()</l>
+</body>
+<docu id="string_recognition">
+<parameters>
+<parameter id="Chars_Char_Confidence">
+<multivalue>optional</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>1.000000</value_max>
+<value_min>0.000000</value_min>
 </parameter>
 <parameter id="Chars_Out">
 <multivalue>optional</multivalue>
@@ -540,7 +1020,26 @@
 <item>string</item>
 </type_list>
 </parameter>
-<parameter id="Markov_Lows"/>
+<parameter id="Chars_Regions">
+<multivalue>optional</multivalue>
+<sem_type>region</sem_type>
+</parameter>
+<parameter id="OCRHandle">
+<mixed_type>false</mixed_type>
+<sem_type>ocr_mlp</sem_type>
+<type_list>
+<item>integer</item>
+</type_list>
+</parameter>
+<parameter id="String_Image">
+<multichannel>false</multichannel>
+<multivalue>false</multivalue>
+<sem_type>image</sem_type>
+<type_list>
+<item>byte</item>
+<item>int8</item>
+</type_list>
+</parameter>
 </parameters>
 </docu>
 </procedure>
