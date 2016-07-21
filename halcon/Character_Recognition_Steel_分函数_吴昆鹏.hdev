@@ -4,12 +4,13 @@
 <interface/>
 <body>
 <c>*读ocr分类器，多个分类器为了进行加权</c>
-<l>read_ocr_class_mlp ('D:/Program Files/MVTec/HALCON-12.0/ocr/Pharma_0-9_NoRej.omc', OCRHandle_Num_1)</l>
-<l>read_ocr_class_mlp ('D:/Program Files/MVTec/HALCON-12.0/ocr/Industrial_0-9_NoRej.omc', OCRHandle_Num_2)</l>
-<l>read_ocr_class_mlp ('D:/Program Files/MVTec/HALCON-12.0/ocr/Document_0-9_NoRej.omc', OCRHandle_Num_3)</l>
-<l>read_ocr_class_mlp ('D:/Program Files/MVTec/HALCON-12.0/ocr/DotPrint_0-9.omc', OCRHandle_Num_4)</l>
-<l>read_ocr_class_mlp ('D:/Program Files/MVTec/HALCON-12.0/ocr/DotPrint_A-Z+_NoRej.omc', OCRHandle_Char_1)</l>
-<l>list_files ('D:/Users/Gddd/Desktop/88', 'files', Files)</l>
+<l>base_directory := 'C:/Users/TSY/Desktop/OCR-on-steel'</l>
+<l>* read_ocr_class_mlp (base_directory+'/omc/Pharma_0-9_NoRej.omc', OCRHandle_Num_1)</l>
+<l>* read_ocr_class_mlp (base_directory+'/omc/Industrial_0-9_NoRej.omc', OCRHandle_Num_2)</l>
+<l>* read_ocr_class_mlp (base_directory+'/omc/Document_0-9_NoRej.omc', OCRHandle_Num_3)</l>
+<l>* read_ocr_class_mlp (base_directory+'/omc/DotPrint_0-9.omc', OCRHandle_Num_4)</l>
+<l>* read_ocr_class_mlp (base_directory+'/omc/DotPrint_A-Z+_NoRej.omc', OCRHandle_Char_1)</l>
+<l>list_files (base_directory+'/sample/20160714', 'files', Files)</l>
 <c>*列表读图像</c>
 <l>for k := 0 to |Files| - 1 by 1</l>
 <l>    read_image (Image, Files[k])</l>
@@ -28,7 +29,7 @@
 <l>            count_obj (Char_SortedRegions, Char_Number)</l>
 <l>            if(Char_Number&gt;5)</l>
 <c>                *字符识别</c>
-<l>                Char_Recognition (Char_ImagePart, Char_SortedRegions, Char_RegionCenter_Y, OCRHandle_Num_1, OCRHandle_Num_2, OCRHandle_Num_3, OCRHandle_Num_4, OCRHandle_Char_1, Char_Class)    </l>
+<l>                *Char_Recognition (Char_ImagePart, Char_SortedRegions, Char_RegionCenter_Y, OCRHandle_Num_1, OCRHandle_Num_2, OCRHandle_Num_3, OCRHandle_Num_4, OCRHandle_Char_1, Char_Class)    </l>
 <l>            endif</l>
 <l>        endif      </l>
 <l>    endif    </l>
