@@ -1,24 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<hdevelop file_version="1.1" halcon_version="12.0">
+<hdevelop file_version="1.1" halcon_version="12.0.1">
 <procedure name="main">
 <interface/>
 <body>
-<l>full_sample:= 'D:/文字识别项目/南钢字符图/full_sample'</l>
-<l>part_sample:= 'D:/文字识别项目/南钢字符图/part_sample'</l>
-<l>part_sample_OCR:=part_sample+'\\part_sample_OCR.trf'</l>
+<l>base_directory := 'C:/Users/TSY/Desktop/OCR-on-steel'</l>
+<l>full_sample:= '/sample/20160714'</l>
+<l>part_sample:= 'sample/part_sample'</l>
+<l>part_sample_OCR:=part_sample +'\\part_sample_OCR.trf'</l>
 <c></c>
-<l>filtered_sample:= 'D:/文字识别项目/南钢字符图/filtered_sample'</l>
+<l>filtered_sample:= 'sample/filtered_sample'</l>
 <l>filtered_sample_OCR:=filtered_sample+'\\filtered_sample_OCR.trf'</l>
 <c></c>
-<l>file_OCR:='D:/文字识别项目/南钢字符图/Code/DotPrint.omc'</l>
+<l>file_OCR:='omc/DotPrint.omc'</l>
 <l>read_ocr_class_mlp (file_OCR, file_OCR_Handle1)</l>
-<l>file_OCR_NoRej:='D:/文字识别项目/南钢字符图/Code/DotPrint_NoRej.omc'</l>
+<l>file_OCR_NoRej:='omc/DotPrint_NoRej.omc'</l>
 <l>read_ocr_class_mlp (file_OCR_NoRej, file_OCR_NoRej_Handle1)</l>
-<l>file_OCR_09:='D:/文字识别项目/南钢字符图/Code/DotPrint_0-9.omc'</l>
+<l>file_OCR_09:='omc/DotPrint_0-9.omc'</l>
 <l>read_ocr_class_mlp (file_OCR_09, file_OCR_09_Handle1)</l>
-<l>file_OCR_AZ:='D:/文字识别项目/南钢字符图/Code/DotPrint_A-Z+.omc'</l>
+<l>file_OCR_AZ:='omc/DotPrint_A-Z+.omc'</l>
 <l>read_ocr_class_mlp (file_OCR_AZ, file_OCR_AZ_Handle1)</l>
-<l>file_OCR_09AZ:='D:/文字识别项目/南钢字符图/Code/DotPrint_0-9A-Z.omc'</l>
+<l>file_OCR_09AZ:='omc/DotPrint_0-9A-Z.omc'</l>
 <l>read_ocr_class_mlp (file_OCR_09AZ, file_OCR_09AZ_Handle1)</l>
 <c></c>
 <c></c>
@@ -107,7 +108,7 @@
 <c></c>
 <c></c>
 <l>dst:= 'D:/文字识别项目/南钢字符图/dst'</l>
-<l>read_ocr_class_mlp ('D:/文字识别项目/南钢字符图/Code/DotPrint_NoRej.omc', OCRHandle)</l>
+<l>read_ocr_class_mlp ('omc/DotPrint_NoRej.omc', OCRHandle)</l>
 <l>list_files (full_sample, 'files', Files)</l>
 <l>for k := 0 to |Files| - 1 by 1</l>
 <l>    full_sample_file:=Files[k]</l>
