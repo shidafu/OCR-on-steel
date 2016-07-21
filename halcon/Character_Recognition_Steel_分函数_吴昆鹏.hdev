@@ -4,7 +4,7 @@
 <interface/>
 <body>
 <c>*读ocr分类器，多个分类器为了进行加权</c>
-<l>base_directory := 'C:/Users/TSY/Desktop/OCR-on-steel'</l>
+<l>base_directory := 'D:/OCR-on-steel'</l>
 <l>* read_ocr_class_mlp (base_directory+'/omc/Pharma_0-9_NoRej.omc', OCRHandle_Num_1)</l>
 <l>* read_ocr_class_mlp (base_directory+'/omc/Industrial_0-9_NoRej.omc', OCRHandle_Num_2)</l>
 <l>* read_ocr_class_mlp (base_directory+'/omc/Document_0-9_NoRej.omc', OCRHandle_Num_3)</l>
@@ -16,7 +16,7 @@
 <l>    read_image (Image, Files[k])</l>
 <c>    *转灰度图</c>
 <l>    Image_To_GrayImage(Image,ImageGray)</l>
-<c>    *下采样切割有效面积</c>
+<c>    *下采样切割有效面积(按比例缩小图像)</c>
 <l>    Steel_GetImageEffect(ImageGray,Steel_ImagePart,60,60)</l>
 <c>    *图像预处理-找字符区域</c>
 <l>    Steel_LocationChar (Steel_ImagePart, Char_ImagePart, 0.15, 0.8, IsExistChar, CharPos)</l>
@@ -24,6 +24,8 @@
 <l>    if(IsExistChar==true)</l>
 <c>        *字符分割</c>
 <l>        Char_ImageToRegion (Char_ImagePart, Char_SortedRegions, Char_RegionCenter_Y, IsGetCharRegion)</l>
+<l>        smallest_rectangle1 (Char_SortedRegions, Row1, Column1, Row2, Column2)</l>
+<c>        </c>
 <c>        *存在字符区域</c>
 <l>        if(IsGetCharRegion==true)</l>
 <l>            count_obj (Char_SortedRegions, Char_Number)</l>
@@ -296,28 +298,40 @@
 <l>IsExistChar:=false</l>
 <c>*利用soble特征找字符区域</c>
 <l>get_image_size (ImageIn, Width_Steel, Height_Steel)</l>
+<c> *sobel滤波，边缘提取：找灰度梯度最大的部分</c>
 <l>sobel_amp (ImageIn, EdgeAmplitude_Steel, 'sum_abs', 3)</l>
 <l>intensity (EdgeAmplitude_Steel, EdgeAmplitude_Steel, Mean_Steel, Deviation_Steel)</l>
 <l>th_steel:=Mean_Steel*8</l>
 <l>if(th_steel&gt;200)</l>
 <l>    th_steel:=200</l>
 <l>endif</l>
+<c> *设二值化的阈值</c>
 <l>threshold (EdgeAmplitude_Steel, Th_Regions_Steel, th_steel, 255)</l>
+<c> *闭合区域：为了更好的分块</c>
 <l>closing_circle (Th_Regions_Steel, RegionClosing_Steel, 3.5)</l>
+<c> *把连在一起的图像，存储成一个区域</c>
 <l>connection (RegionClosing_Steel, ConnectedDots_Steel)</l>
+<c> *挑出高度1&lt;height&lt;100的图像，去裂纹</c>
 <l>select_shape (ConnectedDots_Steel, SelectedRegions_Temp_Steel, 'height', 'and', 1, 100)</l>
 <l>count_obj (SelectedRegions_Temp_Steel, Number_Select1)</l>
 <l>if(Number_Select1&gt;5)</l>
 <c>    *利用最小矩形框区域</c>
+<c>     *计算矩形区域大小</c>
 <l>    smallest_rectangle1 (SelectedRegions_Temp_Steel, Row1_1, Column1_1, Row2_1, Column2_1)</l>
+<c>     *显示出矩形区域</c>
 <l>    gen_rectangle1 (Rectangle_Steel, Row1_1, Column1_1, Row2_1, Column2_1)</l>
-<c>    </c>
+<c>     *按面积筛选矩形区域</c>
 <l>    select_shape (Rectangle_Steel, SelectedRegions_Steel, 'area', 'and', 80, 99999)</l>
-<l>    union1 (SelectedRegions_Steel, RegionUnion_Steel)   </l>
-<l>    closing_circle (RegionUnion_Steel, RegionClosing_C_Steel, 3.5)   </l>
+<c>     *把所有矩形区域合并为一个整体</c>
+<l>    union1 (SelectedRegions_Steel, RegionUnion_Steel)</l>
+<c>     *闭合图形</c>
+<l>    closing_circle (RegionUnion_Steel, RegionClosing_C_Steel, 3.5)</l>
+<c>     *充满矩形区域，为了获取图像区域</c>
 <l>    closing_rectangle1 (RegionClosing_C_Steel, RegionClosing_R_Steel, 80, 5)</l>
+<c>     *擦除，缩小目标图像区域</c>
 <l>    erosion_circle (RegionClosing_R_Steel, RegionErosion_C_Steel, 5)</l>
-<l>    connection (RegionErosion_C_Steel, ConnectedLines_C_Steel)    </l>
+<l>    connection (RegionErosion_C_Steel, ConnectedLines_C_Steel)</l>
+<c>     *用更严格的条件(高+面积)选择图形</c>
 <l>    select_shape (ConnectedLines_C_Steel, SelectedRegions_C_Steel, ['height','area'], 'and', [15,2000], [99999,99999])    </l>
 <l>    count_obj (SelectedRegions_C_Steel, Number_Select2)</l>
 <l>    if(Number_Select2&gt;0) </l>
@@ -325,10 +339,13 @@
 <l>        union1 (SelectedRegions_C_Steel, RegionUnion_C_Steel)</l>
 <l>        dilation_circle (RegionUnion_C_Steel, RegionDilation_C_Steel, 15)</l>
 <l>        connection (RegionDilation_C_Steel, ConnectedLines_Steel)</l>
+<c>         *用宽高面积筛选</c>
 <l>        select_shape (ConnectedLines_Steel, SelectedLines_Steel, ['width','height','area'], 'and', [150,20,5000], [1000,200,99999])</l>
+<c>         *用矩形度筛选</c>
 <l>        select_shape (SelectedLines_Steel, SelectedRegions_Steel_Final, 'rectangularity', 'and', 0.65, 1)</l>
 <l>        count_obj (SelectedRegions_Steel_Final, Number_Steel)</l>
-<l>        if(Number_Steel&gt;0)    </l>
+<l>        if(Number_Steel&gt;0)</l>
+<c>            *计算高，宽，中心点所在行</c>
 <l>            region_features (SelectedRegions_Steel_Final, 'height', Value_Height_Steel)</l>
 <l>            region_features (SelectedRegions_Steel_Final, 'width', Value_Width_Steel)</l>
 <l>            region_features (SelectedRegions_Steel_Final, 'row', Value_Row_Steel)</l>
@@ -346,6 +363,7 @@
 <c>            </c>
 <l>            if(Num_String&gt;=0)</l>
 <l>                select_obj (SelectedRegions_Steel_Final, ObjectSelected_Char, Num_String+1)</l>
+<c>                *获取区域特征</c>
 <l>                region_features (ObjectSelected_Char, 'width', S_Width)</l>
 <l>                region_features (ObjectSelected_Char, 'height', S_Height)</l>
 <l>                if(S_Width/(S_Height+0.0001)&gt;3)</l>
@@ -354,6 +372,7 @@
 <l>                    region_features (ObjectSelected_Char, 'column', S_Center)</l>
 <c>                    *对图像中字符位置在中间位置时认为有效</c>
 <l>                    if(S_Center&lt;Pos_Right*Width_Steel and S_Center&gt;Pos_Left*Width_Steel and Row1_2&gt;0 and Row2_2&lt;Height_Steel and Column1_2&gt;0 and Column2_2&lt;Width_Steel) </l>
+<c>                         *把目标矩形切割出来</c>
 <l>                        crop_rectangle1 (ImageIn, ImageOut, Row1_2, Column1_2, Row2_2, Column2_2)</l>
 <l>                        IsExistChar:=true</l>
 <l>                        CharPos:=(Column1_2[0]+Column2_2[0])/2</l>
@@ -391,15 +410,18 @@
 </interface>
 <body>
 <l>IsGetCharRegion:=false</l>
-<l>get_image_size (ImageIn, Width_Char, Height_Char) </l>
+<l>get_image_size (ImageIn, Width_Char, Height_Char)</l>
+<c> *决定某个方形区域内的灰度值，计算方形区域内的最大最小灰度的差，并体现到每个图像点上。如果MaskHeight和MaskWidth是偶数，它们被变为靠近的小的奇数值，图像边缘的灰度值是呈镜像出现的</c>
 <l>gray_range_rect (ImageIn, ImageResult_Char, 3, 3) </l>
 <c>*第一种分割</c>
 <l>gen_rectangle1 (Rectangle_Char, 0, 0, Height_Char, Width_Char)</l>
+<c> *得到最大最小灰度值</c>
 <l>min_max_gray (Rectangle_Char, ImageResult_Char, 40, Min_Char, Max_Char, Range)</l>
 <l>th_char:=Min_Char+20</l>
 <l>if(th_char&gt;200)</l>
 <l>    th_char:=200</l>
 <l>endif</l>
+<c> *二值化</c>
 <l>threshold (ImageResult_Char, Region_Char, th_char, 255)                </l>
 <l>closing_circle (Region_Char, RegionClosing_Char, 1.5)</l>
 <l>erosion_circle (RegionClosing_Char, RegionErosion_Char, 1.5)</l>
@@ -427,6 +449,7 @@
 <l>    tuple_deviation (Value_Center_Y, Deviation)</l>
 <l>    CharRegionCenter:=Mean</l>
 <c>    *分割1</c>
+<c>    *以中心为基准，去掉超过一定范围的上下左右的噪点</c>
 <l>    select_shape (SelectedRegions_Char, SelectedRegions_Char1, ['row','column'], 'and', [Mean-(Deviation+15),Width_Char*0.02], [Mean+(Deviation+15),Width_Char*0.98])</l>
 <l>    count_obj (SelectedRegions_Char1, Number_Char) </l>
 <l>    if(Number_Char&gt;4 and Deviation&lt;15)</l>
@@ -441,6 +464,7 @@
 <l>            tuple_max (Value_Width_Char2, Max_Char2)</l>
 <l>            region_features (SelectedRegions_Char1, 'width', Value_Width_Char1)               </l>
 <l>            tuple_max (Value_Width_Char1, Max_Char1)</l>
+<c>            *？为什么切割后会比切割前大</c>
 <l>            if(Max_Char2-Max_Char1&gt;20)</l>
 <l>                sort_region (SelectedRegions_Char1, RegionOut, 'character', 'true', 'column')</l>
 <l>                IsGetCharRegion:=true</l>
