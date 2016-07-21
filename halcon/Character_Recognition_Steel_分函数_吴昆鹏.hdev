@@ -1,0 +1,732 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="12.0.1">
+<procedure name="main">
+<interface/>
+<body>
+<c>*读ocr分类器，多个分类器为了进行加权</c>
+<l>read_ocr_class_mlp ('D:/Program Files/MVTec/HALCON-12.0/ocr/Pharma_0-9_NoRej.omc', OCRHandle_Num_1)</l>
+<l>read_ocr_class_mlp ('D:/Program Files/MVTec/HALCON-12.0/ocr/Industrial_0-9_NoRej.omc', OCRHandle_Num_2)</l>
+<l>read_ocr_class_mlp ('D:/Program Files/MVTec/HALCON-12.0/ocr/Document_0-9_NoRej.omc', OCRHandle_Num_3)</l>
+<l>read_ocr_class_mlp ('D:/Program Files/MVTec/HALCON-12.0/ocr/DotPrint_0-9.omc', OCRHandle_Num_4)</l>
+<l>read_ocr_class_mlp ('D:/Program Files/MVTec/HALCON-12.0/ocr/DotPrint_A-Z+_NoRej.omc', OCRHandle_Char_1)</l>
+<l>list_files ('D:/Users/Gddd/Desktop/88', 'files', Files)</l>
+<c>*列表读图像</c>
+<l>for k := 0 to |Files| - 1 by 1</l>
+<l>    read_image (Image, Files[k])</l>
+<c>    *转灰度图</c>
+<l>    Image_To_GrayImage(Image,ImageGray)</l>
+<c>    *下采样切割有效面积</c>
+<l>    Steel_GetImageEffect(ImageGray,Steel_ImagePart,60,60)</l>
+<c>    *图像预处理-找字符区域</c>
+<l>    Steel_LocationChar (Steel_ImagePart, Char_ImagePart, 0.15, 0.8, IsExistChar, CharPos)</l>
+<c>    *切到字符图再进行下面操作</c>
+<l>    if(IsExistChar==true)</l>
+<c>        *字符分割</c>
+<l>        Char_ImageToRegion (Char_ImagePart, Char_SortedRegions, Char_RegionCenter_Y, IsGetCharRegion)</l>
+<c>        *存在字符区域</c>
+<l>        if(IsGetCharRegion==true)</l>
+<l>            count_obj (Char_SortedRegions, Char_Number)</l>
+<l>            if(Char_Number&gt;5)</l>
+<c>                *字符识别</c>
+<l>                Char_Recognition (Char_ImagePart, Char_SortedRegions, Char_RegionCenter_Y, OCRHandle_Num_1, OCRHandle_Num_2, OCRHandle_Num_3, OCRHandle_Num_4, OCRHandle_Char_1, Char_Class)    </l>
+<l>            endif</l>
+<l>        endif      </l>
+<l>    endif    </l>
+<l>    stop()</l>
+<l>endfor</l>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="enhance_contrast">
+<interface>
+<io>
+<par name="Chars" base_type="iconic" dimension="0"/>
+<par name="ImageInvert" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="ImageScaleMax" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<l>union1 (Chars, RegionUnion)</l>
+<l>paint_region (RegionUnion, ImageInvert, ImageScaleMax, 10, 'fill')</l>
+<l>return ()</l>
+</body>
+<docu id="enhance_contrast">
+<parameters>
+<parameter id="Chars"/>
+<parameter id="ImageInvert"/>
+<parameter id="ImageScaleMax"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="gen_sobel_features">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="Features" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="FeaturesExtended" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* Coocurrence matrix for 0 deg and 90 deg:</c>
+<l>cooc_feature_image (Image, Image, 6, 0, Energy, Correlation, Homogeneity, Contrast)</l>
+<l>cooc_feature_image (Image, Image, 6, 90, Energy, Correlation, Homogeneity, Contrast)</l>
+<c>* Absolute histogram of edge amplitudes:</c>
+<l>sobel_amp (Image, EdgeAmplitude, 'sum_abs', 3)</l>
+<l>gray_histo_abs (EdgeAmplitude, EdgeAmplitude, 8, AbsoluteHistoEdgeAmplitude)</l>
+<c>* Entropy and anisotropy:</c>
+<l>* entropy_gray (Image, Image, Entropy, Anisotropy)</l>
+<c>* Absolute histogram of gray values:</c>
+<l>* gray_histo_abs (Image, Image, 8, AbsoluteHistoImage)</l>
+<c>* Add features to feature vector:</c>
+<l>FeaturesExtended := [Features,Energy,Correlation,Homogeneity,Contrast]</l>
+<l>FeaturesExtended := [FeaturesExtended,AbsoluteHistoEdgeAmplitude]</l>
+<l>* FeaturesExtended := [FeaturesExtended,Entropy,Anisotropy]</l>
+<l>* FeaturesExtended := [FeaturesExtended,AbsoluteHistoImage]</l>
+<l>return ()</l>
+</body>
+<docu id="gen_sobel_features">
+<short lang="en_US">compute various texture features and append them to input feature vector</short>
+<short lang="zh_CN">compute various texture features and append them to input feature vector</short>
+<parameters>
+<parameter id="Features"/>
+<parameter id="FeaturesExtended"/>
+<parameter id="Image"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="gen_features">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<oc>
+<par name="FeatureVector" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>FeatureVector := []</l>
+<c>* Compute features.</c>
+<l>gen_sobel_features (Image, FeatureVector, FeatureVector)</l>
+<c>* Downscale the image (image pyramid) and compute features.</c>
+<l>zoom_image_factor (Image, Zoomed1, 0.5, 0.5, 'constant')</l>
+<l>gen_sobel_features (Zoomed1, FeatureVector, FeatureVector)</l>
+<c>* Uncomment lines to use further pyramid levels:</c>
+<l>zoom_image_factor (Zoomed1, Zoomed2, 0.5, 0.5, 'constant')</l>
+<l>* gen_sobel_features (Zoomed2, FeatureVector, FeatureVector)</l>
+<l>* zoom_image_factor (Zoomed2, Zoomed3, 0.5, 0.5, 'constant')</l>
+<l>* gen_sobel_features (Zoomed3, FeatureVector, FeatureVector)</l>
+<l>* zoom_image_factor (Zoomed3, Zoomed4, 0.5, 0.5, 'constant')</l>
+<l>* gen_sobel_features (Zoomed4, FeatureVector, FeatureVector)</l>
+<l>FeatureVector := real(FeatureVector)</l>
+<l>return ()</l>
+</body>
+<docu id="gen_features">
+<short lang="en_US">compute texture features on multiple pyramid levels</short>
+<short lang="zh_CN">compute texture features on multiple pyramid levels</short>
+<parameters>
+<parameter id="FeatureVector"/>
+<parameter id="Image"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="filter_fftbandpass">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="ImageOut" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="MinFrequency" base_type="ctrl" dimension="0"/>
+<par name="MaxFrequency" base_type="ctrl" dimension="0"/>
+<par name="Mode" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<l>get_image_size (ImageIn, Width_Part, Height_Part)</l>
+<l>gen_bandpass (Bandpass, MinFrequency, MaxFrequency, 'n', Mode, Width_Part, Height_Part)</l>
+<l>fft_generic (ImageIn, ImagePart_Steel_FFT, 'to_freq', -1, 'none', Mode, 'complex')</l>
+<l>convol_fft (ImagePart_Steel_FFT, Bandpass, ImagePart_Steel_FFT_Banded)</l>
+<l>fft_generic (ImagePart_Steel_FFT_Banded, ImageOut, 'from_freq', 1, 'none', Mode, 'byte')</l>
+<l>return ()</l>
+</body>
+<docu id="filter_fftbandpass">
+<abstract lang="zh_CN">同gen_bandpassgen</abstract>
+<parameters>
+<parameter id="ImageIn">
+<multichannel>false</multichannel>
+<multivalue>false</multivalue>
+<sem_type>image</sem_type>
+<type_list>
+<item>byte</item>
+<item>int8</item>
+</type_list>
+</parameter>
+<parameter id="ImageOut">
+<multichannel>false</multichannel>
+<multivalue>false</multivalue>
+<sem_type>image</sem_type>
+<type_list>
+<item>byte</item>
+<item>int8</item>
+</type_list>
+</parameter>
+<parameter id="MaxFrequency">
+<default_value>2.00</default_value>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>2.000000</value_max>
+<value_min>0.000000</value_min>
+</parameter>
+<parameter id="MinFrequency">
+<default_value>0.00</default_value>
+<multivalue>false</multivalue>
+<sem_type>real</sem_type>
+<type_list>
+<item>real</item>
+</type_list>
+<value_max>2.000000</value_max>
+<value_min>0.000000</value_min>
+</parameter>
+<parameter id="Mode">
+<default_value>'dc_edge'</default_value>
+<multivalue>false</multivalue>
+<sem_type>string</sem_type>
+<type_list>
+<item>string</item>
+</type_list>
+<value_list>
+<item>'dc_center'</item>
+<item>'dc_edge'</item>
+</value_list>
+</parameter>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Image_To_GrayImage">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="ImageOut" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<c>*计算通道数</c>
+<l>count_channels (ImageIn, Channels)</l>
+<l>if(Channels==3)</l>
+<l>    decompose3(ImageIn,ImageR,ImageG,ImageB)</l>
+<l>    trans_from_rgb(ImageR,ImageG,ImageB,ImageResult1, ImageResult2, ImageResult3, 'hsv')</l>
+<l>    rgb3_to_gray (ImageIn, ImageIn, ImageIn, ImageOut)</l>
+<l>else</l>
+<l>    ImageOut:=ImageIn</l>
+<l>endif</l>
+<l>return ()</l>
+</body>
+<docu id="Image_To_GrayImage">
+<parameters>
+<parameter id="ImageIn"/>
+<parameter id="ImageOut"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Steel_GetImageEffect">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="ImageOut" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="CutTop" base_type="ctrl" dimension="0"/>
+<par name="CutBotton" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>*进行下采样</c>
+<l>gen_gauss_pyramid (ImageIn, ImagePyramid, 'weighted', 0.5)</l>
+<l>select_obj (ImagePyramid, ImageGray_2D, 2)</l>
+<l>get_image_size (ImageGray_2D, Width_Src_2D, Height_Src_2D)</l>
+<c>*切割图像</c>
+<l>crop_rectangle1 (ImageGray_2D, ImageOut, CutTop, 0, Height_Src_2D-CutBotton, Width_Src_2D)</l>
+<l>return ()</l>
+</body>
+<docu id="Steel_GetImageEffect">
+<parameters>
+<parameter id="CutBotton"/>
+<parameter id="CutTop"/>
+<parameter id="ImageIn"/>
+<parameter id="ImageOut"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Steel_LocationChar">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="ImageOut" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="Pos_Left" base_type="ctrl" dimension="0"/>
+<par name="Pos_Right" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="IsExistChar" base_type="ctrl" dimension="0"/>
+<par name="CharPos" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>IsExistChar:=false</l>
+<c>*利用soble特征找字符区域</c>
+<l>get_image_size (ImageIn, Width_Steel, Height_Steel)</l>
+<l>sobel_amp (ImageIn, EdgeAmplitude_Steel, 'sum_abs', 3)</l>
+<l>intensity (EdgeAmplitude_Steel, EdgeAmplitude_Steel, Mean_Steel, Deviation_Steel)</l>
+<l>th_steel:=Mean_Steel*8</l>
+<l>if(th_steel&gt;200)</l>
+<l>    th_steel:=200</l>
+<l>endif</l>
+<l>threshold (EdgeAmplitude_Steel, Th_Regions_Steel, th_steel, 255)</l>
+<l>closing_circle (Th_Regions_Steel, RegionClosing_Steel, 3.5)</l>
+<l>connection (RegionClosing_Steel, ConnectedDots_Steel)</l>
+<l>select_shape (ConnectedDots_Steel, SelectedRegions_Temp_Steel, 'height', 'and', 1, 100)</l>
+<l>count_obj (SelectedRegions_Temp_Steel, Number_Select1)</l>
+<l>if(Number_Select1&gt;5)</l>
+<c>    *利用最小矩形框区域</c>
+<l>    smallest_rectangle1 (SelectedRegions_Temp_Steel, Row1_1, Column1_1, Row2_1, Column2_1)</l>
+<l>    gen_rectangle1 (Rectangle_Steel, Row1_1, Column1_1, Row2_1, Column2_1)</l>
+<c>    </c>
+<l>    select_shape (Rectangle_Steel, SelectedRegions_Steel, 'area', 'and', 80, 99999)</l>
+<l>    union1 (SelectedRegions_Steel, RegionUnion_Steel)   </l>
+<l>    closing_circle (RegionUnion_Steel, RegionClosing_C_Steel, 3.5)   </l>
+<l>    closing_rectangle1 (RegionClosing_C_Steel, RegionClosing_R_Steel, 80, 5)</l>
+<l>    erosion_circle (RegionClosing_R_Steel, RegionErosion_C_Steel, 5)</l>
+<l>    connection (RegionErosion_C_Steel, ConnectedLines_C_Steel)    </l>
+<l>    select_shape (ConnectedLines_C_Steel, SelectedRegions_C_Steel, ['height','area'], 'and', [15,2000], [99999,99999])    </l>
+<l>    count_obj (SelectedRegions_C_Steel, Number_Select2)</l>
+<l>    if(Number_Select2&gt;0) </l>
+<c>        *将小区域连接成一个长方形的整块，来确定字符区域</c>
+<l>        union1 (SelectedRegions_C_Steel, RegionUnion_C_Steel)</l>
+<l>        dilation_circle (RegionUnion_C_Steel, RegionDilation_C_Steel, 15)</l>
+<l>        connection (RegionDilation_C_Steel, ConnectedLines_Steel)</l>
+<l>        select_shape (ConnectedLines_Steel, SelectedLines_Steel, ['width','height','area'], 'and', [150,20,5000], [1000,200,99999])</l>
+<l>        select_shape (SelectedLines_Steel, SelectedRegions_Steel_Final, 'rectangularity', 'and', 0.65, 1)</l>
+<l>        count_obj (SelectedRegions_Steel_Final, Number_Steel)</l>
+<l>        if(Number_Steel&gt;0)    </l>
+<l>            region_features (SelectedRegions_Steel_Final, 'height', Value_Height_Steel)</l>
+<l>            region_features (SelectedRegions_Steel_Final, 'width', Value_Width_Steel)</l>
+<l>            region_features (SelectedRegions_Steel_Final, 'row', Value_Row_Steel)</l>
+<l>            Num_String:=-1</l>
+<l>            S_RowToCenter:=1000</l>
+<l>            for Index:=0 to Number_Steel-1 by 1</l>
+<l>                if(Value_Height_Steel[Index]&lt;100 and Value_Width_Steel[Index]&lt;500)  </l>
+<l>                    tuple_abs (Value_Row_Steel[Index]-Height_Steel/2, Abs_S_RowToCenter)</l>
+<l>                    if(Abs_S_RowToCenter&lt;S_RowToCenter and Value_Width_Steel[Index]/(Value_Height_Steel[Index]+0.0001)&gt;3)</l>
+<l>                        S_RowToCenter:=Abs_S_RowToCenter</l>
+<l>                        Num_String:=Index</l>
+<l>                    endif         </l>
+<l>                endif</l>
+<l>            endfor</l>
+<c>            </c>
+<l>            if(Num_String&gt;=0)</l>
+<l>                select_obj (SelectedRegions_Steel_Final, ObjectSelected_Char, Num_String+1)</l>
+<l>                region_features (ObjectSelected_Char, 'width', S_Width)</l>
+<l>                region_features (ObjectSelected_Char, 'height', S_Height)</l>
+<l>                if(S_Width/(S_Height+0.0001)&gt;3)</l>
+<c>                    *最终确定字符区域的位置</c>
+<l>                    smallest_rectangle1 (ObjectSelected_Char, Row1_2, Column1_2, Row2_2, Column2_2)      </l>
+<l>                    region_features (ObjectSelected_Char, 'column', S_Center)</l>
+<c>                    *对图像中字符位置在中间位置时认为有效</c>
+<l>                    if(S_Center&lt;Pos_Right*Width_Steel and S_Center&gt;Pos_Left*Width_Steel and Row1_2&gt;0 and Row2_2&lt;Height_Steel and Column1_2&gt;0 and Column2_2&lt;Width_Steel) </l>
+<l>                        crop_rectangle1 (ImageIn, ImageOut, Row1_2, Column1_2, Row2_2, Column2_2)</l>
+<l>                        IsExistChar:=true</l>
+<l>                        CharPos:=(Column1_2[0]+Column2_2[0])/2</l>
+<l>                    endif</l>
+<l>                endif</l>
+<l>            endif</l>
+<l>        endif</l>
+<l>    endif      </l>
+<l>endif</l>
+<l>return ()</l>
+</body>
+<docu id="Steel_LocationChar">
+<parameters>
+<parameter id="CharPos"/>
+<parameter id="ImageIn"/>
+<parameter id="ImageOut"/>
+<parameter id="IsExistChar"/>
+<parameter id="Pos_Left"/>
+<parameter id="Pos_Right"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Char_ImageToRegion">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="RegionOut" base_type="iconic" dimension="0"/>
+</oo>
+<oc>
+<par name="CharRegionCenter" base_type="ctrl" dimension="0"/>
+<par name="IsGetCharRegion" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>IsGetCharRegion:=false</l>
+<l>get_image_size (ImageIn, Width_Char, Height_Char) </l>
+<l>gray_range_rect (ImageIn, ImageResult_Char, 3, 3) </l>
+<c>*第一种分割</c>
+<l>gen_rectangle1 (Rectangle_Char, 0, 0, Height_Char, Width_Char)</l>
+<l>min_max_gray (Rectangle_Char, ImageResult_Char, 40, Min_Char, Max_Char, Range)</l>
+<l>th_char:=Min_Char+20</l>
+<l>if(th_char&gt;200)</l>
+<l>    th_char:=200</l>
+<l>endif</l>
+<l>threshold (ImageResult_Char, Region_Char, th_char, 255)                </l>
+<l>closing_circle (Region_Char, RegionClosing_Char, 1.5)</l>
+<l>erosion_circle (RegionClosing_Char, RegionErosion_Char, 1.5)</l>
+<l>connection (RegionErosion_Char, ConnectedRegions_Char)</l>
+<c>*第二种分割，也是为了针对不同粗细的字符</c>
+<l>intensity (ImageResult_Char, ImageResult_Char, Mean_J, Deviation_J)</l>
+<l>count_obj (ConnectedRegions_Char, Number_J)</l>
+<l>if(Min_Char*Max_Char&gt;25 or Number_J&gt;=14)</l>
+<l>    binary_threshold (ImageResult_Char, Region_B_Char, 'max_separability', 'light', UsedThreshold)</l>
+<l>    closing_circle (Region_B_Char, RegionClosing_B_Char, 2)</l>
+<l>    connection (RegionClosing_B_Char, ConnectedRegions_Char_temp)</l>
+<l>    count_obj (ConnectedRegions_Char_temp, Number_JJ)</l>
+<l>    if(Number_JJ&lt;Number_J or Number_JJ&lt;=10)</l>
+<l>        ConnectedRegions_Char:=ConnectedRegions_Char_temp</l>
+<l>    endif</l>
+<l>endif</l>
+<c>*字符区域去噪声</c>
+<l>select_shape (ConnectedRegions_Char, SelectedRegions_Char, 'area', 'and', 35, 99999)               </l>
+<l>select_shape (SelectedRegions_Char, SelectedRegions_Char_BigArea, ['area','height'], 'and', [200,15], [99999,500])</l>
+<l>count_obj (SelectedRegions_Char, Number_Select1)</l>
+<l>count_obj (SelectedRegions_Char_BigArea, Number_Select_BigArea)</l>
+<l>if(Number_Select1&gt;0 and Number_Select_BigArea&gt;0)</l>
+<l>    region_features (SelectedRegions_Char_BigArea, 'row', Value_Center_Y)               </l>
+<l>    tuple_mean (Value_Center_Y, Mean)</l>
+<l>    tuple_deviation (Value_Center_Y, Deviation)</l>
+<l>    CharRegionCenter:=Mean</l>
+<c>    *分割1</c>
+<l>    select_shape (SelectedRegions_Char, SelectedRegions_Char1, ['row','column'], 'and', [Mean-(Deviation+15),Width_Char*0.02], [Mean+(Deviation+15),Width_Char*0.98])</l>
+<l>    count_obj (SelectedRegions_Char1, Number_Char) </l>
+<l>    if(Number_Char&gt;4 and Deviation&lt;15)</l>
+<c>        *分割2，两种分割是为了防止两个字符连在一起的情况</c>
+<l>        union1 (SelectedRegions_Char1, RegionUnion_Char)</l>
+<l>        partition_dynamic (RegionUnion_Char, Partitioned_Char, 25, 80)  </l>
+<l>        partition_dynamic (Partitioned_Char, Partitioned_Char_2, 25, 80) </l>
+<l>        select_shape (Partitioned_Char_2, SelectedRegions_Char2, 'area', 'and', 10, 99999)</l>
+<l>        count_obj (SelectedRegions_Char2, Number_Select2)</l>
+<l>        if(Number_Select2&gt;0)</l>
+<l>            region_features (SelectedRegions_Char2, 'width', Value_Width_Char2)               </l>
+<l>            tuple_max (Value_Width_Char2, Max_Char2)</l>
+<l>            region_features (SelectedRegions_Char1, 'width', Value_Width_Char1)               </l>
+<l>            tuple_max (Value_Width_Char1, Max_Char1)</l>
+<l>            if(Max_Char2-Max_Char1&gt;20)</l>
+<l>                sort_region (SelectedRegions_Char1, RegionOut, 'character', 'true', 'column')</l>
+<l>                IsGetCharRegion:=true</l>
+<l>            else</l>
+<l>                sort_region (SelectedRegions_Char2, RegionOut, 'character', 'true', 'column')</l>
+<l>                IsGetCharRegion:=true</l>
+<l>            endif</l>
+<l>        endif</l>
+<l>    endif</l>
+<l>endif</l>
+<l>return ()</l>
+</body>
+<docu id="Char_ImageToRegion">
+<parameters>
+<parameter id="CharRegionCenter"/>
+<parameter id="ImageIn"/>
+<parameter id="IsGetCharRegion"/>
+<parameter id="RegionOut"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Char_Recognition">
+<interface>
+<io>
+<par name="ImageIn" base_type="iconic" dimension="0"/>
+<par name="RegionIn" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="CharRegionCenter" base_type="ctrl" dimension="0"/>
+<par name="OCRHandle_Num_1" base_type="ctrl" dimension="0"/>
+<par name="OCRHandle_Num_2" base_type="ctrl" dimension="0"/>
+<par name="OCRHandle_Num_3" base_type="ctrl" dimension="0"/>
+<par name="OCRHandle_Num_4" base_type="ctrl" dimension="0"/>
+<par name="OCRHandle_Char_1" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="Class_Steel" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>*ocr识别的原图必须是白底黑字的图像</c>
+<l>invert_image (ImageIn, ImageInvert_Char_Img)       </l>
+<l>enhance_contrast (RegionIn, ImageInvert_Char_Img, ImageRead_Char_Img)</l>
+<l>region_features (RegionIn, 'area', Value_Area_Char) </l>
+<l>region_features (RegionIn, 'height', Value_Height_Char)</l>
+<l>region_features (RegionIn, 'row', Value_Row_Char)</l>
+<l>count_obj (RegionIn, Number_Char)</l>
+<c>*喷码如20B123-1，19A  1-1的形式，确定-的位置来确定哪一位用数字来确定，哪一位用字母来确定</c>
+<l>F_Pos:=0</l>
+<l>for index:=1 to Number_Char by 1 </l>
+<l>    tuple_abs (Value_Row_Char[index-1]-CharRegionCenter, Abs)</l>
+<l>    if(Value_Area_Char[index-1]&lt;200 and Value_Height_Char[index-1]&lt;15 and Abs&lt;6.5)</l>
+<l>        Class[index-1]:= '-' </l>
+<l>        F_Pos:=index-1</l>
+<l>    endif </l>
+<l>endfor  </l>
+<l>for i:=0 to 12 by 1</l>
+<l>    Class_Steel[i]:='?'</l>
+<l>    Confidence_Steel[i]:='?'</l>
+<l>endfor</l>
+<l>if(F_Pos&gt;3)</l>
+<l>    count_obj (RegionIn, Number_Num_Steel_Char)</l>
+<l>    No_Steel_Char:=0</l>
+<l>    No_Steel_Char_i:=1</l>
+<c>    *日期，占2位</c>
+<l>    while(No_Steel_Char&lt;2)</l>
+<l>        if(No_Steel_Char_i&lt;=Number_Num_Steel_Char)</l>
+<l>            select_obj (RegionIn, ObjectSelected_One, No_Steel_Char_i)</l>
+<l>            region_features (ObjectSelected_One, 'height', Value_Height_Steel_Char_One)</l>
+<l>            if(Value_Height_Steel_Char_One[0]&gt;15)</l>
+<l>                do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_1, Class_One_1, Confidence_One_1)</l>
+<l>                do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_2, Class_One_2, Confidence_One_2)</l>
+<l>                do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_3, Class_One_3, Confidence_One_3)</l>
+<l>                do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_4, Class_One_4, Confidence_One_4)</l>
+<l>                if(Confidence_One_1[0]&gt;=Confidence_One_2[0] and Confidence_One_1[0]&gt;=Confidence_One_3[0] and Confidence_One_1[0]&gt;=Confidence_One_4[0])</l>
+<l>                    Class_Steel[No_Steel_Char]:=Class_One_1[0]</l>
+<l>                    Confidence_Steel[No_Steel_Char]:=Confidence_One_1[0]</l>
+<l>                endif</l>
+<l>                if(Confidence_One_2[0]&gt;=Confidence_One_1[0] and Confidence_One_2[0]&gt;=Confidence_One_3[0] and Confidence_One_2[0]&gt;=Confidence_One_4[0])</l>
+<l>                    Class_Steel[No_Steel_Char]:=Class_One_2[0]</l>
+<l>                    Confidence_Steel[No_Steel_Char]:=Confidence_One_2[0]</l>
+<l>                endif</l>
+<l>                if(Confidence_One_3[0]&gt;=Confidence_One_1[0] and Confidence_One_3[0]&gt;=Confidence_One_2[0] and Confidence_One_3[0]&gt;=Confidence_One_4[0])</l>
+<l>                    Class_Steel[No_Steel_Char]:=Class_One_3[0]</l>
+<l>                    Confidence_Steel[No_Steel_Char]:=Confidence_One_3[0]</l>
+<l>                endif</l>
+<l>                if(Confidence_One_4[0]&gt;=Confidence_One_1[0] and Confidence_One_4[0]&gt;=Confidence_One_2[0] and Confidence_One_4[0]&gt;=Confidence_One_3[0])</l>
+<l>                    Class_Steel[No_Steel_Char]:=Class_One_4[0]</l>
+<l>                    Confidence_Steel[No_Steel_Char]:=Confidence_One_4[0]</l>
+<l>                endif</l>
+<l>                if(Class_One_1[0]==Class_One_2[0] and Class_One_1[0]==Class_One_3[0] and Confidence_One_4[0]&lt;0.999)</l>
+<l>                    if(Confidence_One_1[0]&gt;0.85 or Confidence_One_2[0]&gt;0.85 or Confidence_One_3[0]&gt;0.85 or Confidence_One_4[0]&lt;0.8)</l>
+<l>                        Class_Steel[No_Steel_Char]:=Class_One_1[0] </l>
+<l>                    endif                       </l>
+<l>                endif</l>
+<l>                if(Class_Steel[No_Steel_Char]=='7' or Class_Steel[No_Steel_Char]=='9')</l>
+<l>                    smallest_rectangle1 (ObjectSelected_One, Row1, Column1, Row2, Column2)  </l>
+<l>                    clip_region (ObjectSelected_One, RegionClipped, Row1, Column1, Row1+(Row2-Row1)/2, Column1+(Column2-Column1)/3)</l>
+<l>                    connection (RegionClipped, ConnectedRegions)</l>
+<l>                    region_features (ConnectedRegions, 'height', Value)</l>
+<l>                    Rido:=Value[0]/(Row2-Row1)</l>
+<l>                    if(Rido&gt;0.3 and Rido&lt;0.45)</l>
+<l>                        Class_Steel[No_Steel_Char]:='2'</l>
+<l>                    endif</l>
+<l>                 endif</l>
+<l>                 smallest_rectangle1 (ObjectSelected_One, Row1, Column1, Row2, Column2)  </l>
+<l>                 Rido:=(Row2-Row1)/(Column2-Column1+0.001)</l>
+<l>                 if(Rido&gt;1.8)</l>
+<l>                    Class_Steel[No_Steel_Char]:='1'</l>
+<l>                 endif</l>
+<l>                 No_Steel_Char:=No_Steel_Char+1</l>
+<l>            endif</l>
+<l>        endif</l>
+<l>        No_Steel_Char_i:=No_Steel_Char_i+1</l>
+<l>        if(No_Steel_Char_i&gt;Number_Num_Steel_Char)</l>
+<l>            break                                     </l>
+<l>        endif</l>
+<l>    endwhile</l>
+<c>    *班组，占1位</c>
+<l>    while(No_Steel_Char&lt;3)</l>
+<l>        if(No_Steel_Char_i&lt;=Number_Num_Steel_Char)</l>
+<l>            select_obj (RegionIn, ObjectSelected_One, No_Steel_Char_i)</l>
+<l>            region_features (ObjectSelected_One, 'height', Value_Height_Steel_Char_One)</l>
+<l>            if(Value_Height_Steel_Char_One[0]&gt;15)</l>
+<l>                do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Char_1, Class_One_1, Confidence_One_1)</l>
+<l>                Class_Steel[No_Steel_Char]:=Class_One_1[0]</l>
+<l>                Confidence_Steel[No_Steel_Char]:=Confidence_One_1[0] </l>
+<l>                No_Steel_Char:=No_Steel_Char+1</l>
+<l>            endif</l>
+<l>        endif</l>
+<l>        No_Steel_Char_i:=No_Steel_Char_i+1</l>
+<l>        if(No_Steel_Char_i&gt;Number_Num_Steel_Char)</l>
+<l>            break                                     </l>
+<l>        endif</l>
+<l>    endwhile</l>
+<c>    *块数，占3位但有空格的情况，所以需要用-来确定具体几位</c>
+<l>    while(No_Steel_Char_i&lt;=F_Pos)</l>
+<l>        if(No_Steel_Char_i&lt;=Number_Num_Steel_Char)</l>
+<l>            select_obj (RegionIn, ObjectSelected_One, No_Steel_Char_i)</l>
+<l>            region_features (ObjectSelected_One, 'height', Value_Height_Steel_Char_One)</l>
+<l>            if(Value_Height_Steel_Char_One[0]&gt;15)</l>
+<l>                do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_1, Class_One_1, Confidence_One_1)</l>
+<l>                do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_2, Class_One_2, Confidence_One_2)</l>
+<l>                do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_3, Class_One_3, Confidence_One_3)</l>
+<l>                do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_4, Class_One_4, Confidence_One_4)</l>
+<l>                if(Confidence_One_1[0]&gt;=Confidence_One_2[0] and Confidence_One_1[0]&gt;=Confidence_One_3[0] and Confidence_One_1[0]&gt;=Confidence_One_4[0])</l>
+<l>                    Class_Steel[No_Steel_Char]:=Class_One_1[0]</l>
+<l>                    Confidence_Steel[No_Steel_Char]:=Confidence_One_1[0]</l>
+<l>                endif</l>
+<l>                if(Confidence_One_2[0]&gt;=Confidence_One_1[0] and Confidence_One_2[0]&gt;=Confidence_One_3[0] and Confidence_One_2[0]&gt;=Confidence_One_4[0])</l>
+<l>                    Class_Steel[No_Steel_Char]:=Class_One_2[0]</l>
+<l>                    Confidence_Steel[No_Steel_Char]:=Confidence_One_2[0]</l>
+<l>                endif</l>
+<l>                if(Confidence_One_3[0]&gt;=Confidence_One_1[0] and Confidence_One_3[0]&gt;=Confidence_One_2[0] and Confidence_One_3[0]&gt;=Confidence_One_4[0])</l>
+<l>                    Class_Steel[No_Steel_Char]:=Class_One_3[0]</l>
+<l>                    Confidence_Steel[No_Steel_Char]:=Confidence_One_3[0]</l>
+<l>                endif</l>
+<l>                if(Confidence_One_4[0]&gt;=Confidence_One_1[0] and Confidence_One_4[0]&gt;=Confidence_One_2[0] and Confidence_One_4[0]&gt;=Confidence_One_3[0])</l>
+<l>                    Class_Steel[No_Steel_Char]:=Class_One_4[0]</l>
+<l>                    Confidence_Steel[No_Steel_Char]:=Confidence_One_4[0]</l>
+<l>                endif </l>
+<l>                if(Class_One_1[0]==Class_One_2[0] and Class_One_1[0]==Class_One_3[0] and Confidence_One_4[0]&lt;0.999)</l>
+<l>                    if(Confidence_One_1[0]&gt;0.85 or Confidence_One_2[0]&gt;0.85 or Confidence_One_3[0]&gt;0.85 or Confidence_One_4[0]&lt;0.8)</l>
+<l>                        Class_Steel[No_Steel_Char]:=Class_One_1[0] </l>
+<l>                    endif                       </l>
+<l>                endif</l>
+<c></c>
+<l>                if(Class_Steel[No_Steel_Char]=='7' or Class_Steel[No_Steel_Char]=='9')</l>
+<l>                    smallest_rectangle1 (ObjectSelected_One, Row1, Column1, Row2, Column2)  </l>
+<l>                    clip_region (ObjectSelected_One, RegionClipped, Row1, Column1, Row1+(Row2-Row1)/2, Column1+(Column2-Column1)/3)</l>
+<l>                    connection (RegionClipped, ConnectedRegions)</l>
+<l>                    region_features (ConnectedRegions, 'height', Value)</l>
+<l>                    Rido:=Value[0]/(Row2-Row1)</l>
+<l>                    if(Rido&gt;0.3 and Rido&lt;0.42)</l>
+<l>                        Class_Steel[No_Steel_Char]:='2'</l>
+<l>                    endif</l>
+<l>                endif</l>
+<l>                smallest_rectangle1 (ObjectSelected_One, Row1, Column1, Row2, Column2)  </l>
+<l>                Rido:=(Row2-Row1)/(Column2-Column1+0.001)</l>
+<l>                if(Rido&gt;1.8)</l>
+<l>                    Class_Steel[No_Steel_Char]:='1'</l>
+<l>                endif</l>
+<l>                No_Steel_Char:=No_Steel_Char+1</l>
+<l>            endif</l>
+<l>        endif</l>
+<l>        No_Steel_Char_i:=No_Steel_Char_i+1</l>
+<l>        if(No_Steel_Char_i&gt;Number_Num_Steel_Char)</l>
+<l>            break                                     </l>
+<l>        endif</l>
+<l>    endwhile</l>
+<c>    *横杆</c>
+<l>    for i:=F_Pos+1 to F_Pos+1 by 1           </l>
+<l>        Class_Steel[No_Steel_Char]:='-'</l>
+<l>        Confidence_Steel[No_Steel_Char]:=1</l>
+<l>        No_Steel_Char:=No_Steel_Char+1</l>
+<l>        No_Steel_Char_i:=No_Steel_Char_i+1</l>
+<l>    endfor</l>
+<c>    *分段号，占1位</c>
+<l>    if(Number_Num_Steel_Char&gt;=F_Pos+2)</l>
+<l>        while(No_Steel_Char&lt;F_Pos+2)</l>
+<l>            if(No_Steel_Char_i&lt;=Number_Num_Steel_Char)</l>
+<l>                select_obj (RegionIn, ObjectSelected_One, No_Steel_Char_i)</l>
+<l>                region_features (ObjectSelected_One, 'height', Value_Height_Steel_Char_One)</l>
+<l>                if(Value_Height_Steel_Char_One[0]&gt;15)</l>
+<l>                    do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_1, Class_One_1, Confidence_One_1)</l>
+<l>                    do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_2, Class_One_2, Confidence_One_2)</l>
+<l>                    do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_3, Class_One_3, Confidence_One_3)</l>
+<l>                    do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Num_4, Class_One_4, Confidence_One_4)</l>
+<l>                    if(Confidence_One_1[0]&gt;=Confidence_One_2[0] and Confidence_One_1[0]&gt;=Confidence_One_3[0] and Confidence_One_1[0]&gt;=Confidence_One_4[0])</l>
+<l>                        Class_Steel[No_Steel_Char]:=Class_One_1[0]</l>
+<l>                        Confidence_Steel[No_Steel_Char]:=Confidence_One_1[0]</l>
+<l>                    endif</l>
+<l>                    if(Confidence_One_2[0]&gt;=Confidence_One_1[0] and Confidence_One_2[0]&gt;=Confidence_One_3[0] and Confidence_One_2[0]&gt;=Confidence_One_4[0])</l>
+<l>                        Class_Steel[No_Steel_Char]:=Class_One_2[0]</l>
+<l>                        Confidence_Steel[No_Steel_Char]:=Confidence_One_2[0]</l>
+<l>                    endif</l>
+<l>                    if(Confidence_One_3[0]&gt;=Confidence_One_1[0] and Confidence_One_3[0]&gt;=Confidence_One_2[0] and Confidence_One_3[0]&gt;=Confidence_One_4[0])</l>
+<l>                        Class_Steel[No_Steel_Char]:=Class_One_3[0]</l>
+<l>                        Confidence_Steel[No_Steel_Char]:=Confidence_One_3[0]</l>
+<l>                    endif</l>
+<l>                    if(Confidence_One_4[0]&gt;=Confidence_One_1[0] and Confidence_One_4[0]&gt;=Confidence_One_2[0] and Confidence_One_4[0]&gt;=Confidence_One_3[0])</l>
+<l>                        Class_Steel[No_Steel_Char]:=Class_One_4[0]</l>
+<l>                        Confidence_Steel[No_Steel_Char]:=Confidence_One_4[0]</l>
+<l>                    endif</l>
+<l>                    if(Class_One_1[0]==Class_One_2[0] and Class_One_1[0]==Class_One_3[0] and Confidence_One_4[0]&lt;0.999)</l>
+<l>                        if(Confidence_One_1[0]&gt;0.85 or Confidence_One_2[0]&gt;0.85 or Confidence_One_3[0]&gt;0.85 or Confidence_One_4[0]&lt;0.8)</l>
+<l>                            Class_Steel[No_Steel_Char]:=Class_One_1[0] </l>
+<l>                        endif                       </l>
+<l>                    endif</l>
+<l>                    if(Class_Steel[No_Steel_Char]=='7' or Class_Steel[No_Steel_Char]=='9')</l>
+<l>                        smallest_rectangle1 (ObjectSelected_One, Row1, Column1, Row2, Column2)  </l>
+<l>                        clip_region (ObjectSelected_One, RegionClipped, Row1, Column1, Row1+(Row2-Row1)/2, Column1+(Column2-Column1)/3)</l>
+<l>                        connection (RegionClipped, ConnectedRegions)</l>
+<l>                        region_features (ConnectedRegions, 'height', Value)</l>
+<l>                        Rido:=Value[0]/(Row2-Row1)</l>
+<l>                        if(Rido&gt;0.3 and Rido&lt;0.45)</l>
+<l>                            Class_Steel[No_Steel_Char]:='2'</l>
+<l>                        endif</l>
+<l>                    endif</l>
+<l>                    smallest_rectangle1 (ObjectSelected_One, Row1, Column1, Row2, Column2)  </l>
+<l>                    Rido:=(Row2-Row1)/(Column2-Column1+0.001)</l>
+<l>                    if(Rido&gt;1.8)</l>
+<l>                        Class_Steel[No_Steel_Char]:='1'</l>
+<l>                    endif</l>
+<l>                    No_Steel_Char:=No_Steel_Char+1</l>
+<l>                endif</l>
+<l>            endif</l>
+<l>            No_Steel_Char_i:=No_Steel_Char_i+1</l>
+<l>            if(No_Steel_Char_i&gt;Number_Num_Steel_Char)</l>
+<l>                break                                     </l>
+<l>            endif</l>
+<l>        endwhile</l>
+<l>    endif</l>
+<c>    *备注，尾部多位或一位</c>
+<l>    if(Number_Num_Steel_Char&gt;=F_Pos+3)</l>
+<l>        while(No_Steel_Char_i&lt;=Number_Num_Steel_Char)</l>
+<l>            if(No_Steel_Char_i&lt;=Number_Num_Steel_Char)</l>
+<l>                select_obj (RegionIn, ObjectSelected_One, No_Steel_Char_i)</l>
+<l>                region_features (ObjectSelected_One, 'height', Value_Height_Steel_Char_One)</l>
+<l>                if(Value_Height_Steel_Char_One[0]&gt;15)</l>
+<l>                    do_ocr_multi_class_mlp (ObjectSelected_One, ImageRead_Char_Img, OCRHandle_Char_1, Class_One_1, Confidence_One_1)</l>
+<l>                    Class_Steel[No_Steel_Char]:=Class_One_1[0]</l>
+<l>                    Confidence_Steel[No_Steel_Char]:=Confidence_One_1[0] </l>
+<l>                    No_Steel_Char:=No_Steel_Char+1</l>
+<l>                endif</l>
+<l>            endif</l>
+<l>            No_Steel_Char_i:=No_Steel_Char_i+1</l>
+<l>            if(No_Steel_Char_i&gt;Number_Num_Steel_Char)</l>
+<l>                break                                     </l>
+<l>            endif</l>
+<l>        endwhile</l>
+<l>    endif</l>
+<l>endif</l>
+<l>return ()</l>
+</body>
+<docu id="Char_Recognition">
+<parameters>
+<parameter id="CharRegionCenter"/>
+<parameter id="Class_Steel"/>
+<parameter id="ImageIn"/>
+<parameter id="OCRHandle_Char_1"/>
+<parameter id="OCRHandle_Num_1"/>
+<parameter id="OCRHandle_Num_2"/>
+<parameter id="OCRHandle_Num_3"/>
+<parameter id="OCRHandle_Num_4"/>
+<parameter id="RegionIn"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>
